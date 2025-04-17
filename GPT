@@ -1,1 +1,150 @@
-- 👋 Hi, I’m @Srihari149149
+Project Brief
+07 April 2025
+21:57
+Title: to build hyper personalized recommender systems for TSE
+ 
+Currently, dashboards exist for 25 insights for use cases from both UH and TSEs.
+•	Rules based heuristic model is created for identifying issues and notifying TSE through the TAP app (salesforce CRMA is used for analytics part of this).
+•	Data which is present mostly has volume/value of sales with dealers on the rows. Usually current sales volume/value, base value from previous year (usually MTD/YTD), and % achieved.
+•	product based , dealer network based etc. dashboards are present.
+•	MTD - MTD of current year/ sales of the entire month last year.
+•	YTD - YTD of this year/ sales up until the end of the month for the year.
+ 
+Before the new project begins, Some background:
+ 
+•	Sales hierarchy - TSE - SSE (3-4 TSE under him) - UH (100/110 SSE) - RM (22 RMs) - DM (7) - GM (2)
+•	Sales happens in 3 periods, first phase: TSE builds relationships, second phase TSE's start sales, most sales happen in the last few days/weeks (TSE tries to dump)
+•	Active dealers - 5lakh turnover yearly 
+•	Dealer categories - will be in an excel sheet
+•	Currently its all country rules, now have to personalize it on a dealer by dealer basis.
+•	How billing works? - order placed - once delivered it is billed - payment collected based on credit line (paying early gives you discounts)
+•	Salesforce data is at a monthly level - SAP groups it and sends it to SF. Granularity  is at a dealer-product code - month level.
+•	Transaction data is at a SKU level.
+ 
+Current model disadvantages:
+ 
+1.	Earlier model sends notification of 1-3 insights per day as per schedule. Issue: even if the dealer has done well it sends the notification i.e it's not personalized per dealer.
+2.	That particular notification will go to all dealers irrespective of if they need it or not, which is not really useful.
+3.	Only diagnostic and prescriptive analytics used here. No prediction.
+4.	New issues for AP like churn is not formulated here.
+ 
+What do I have to do:
+ 
+1.	Develop an algorithm to rank the insights and prioritize them in order of most important to least important for each dealer. Now, when the notifications go, it'll be personalized to the specific TSE.
+2.	Create new insights based on interactions with the UH and market visits.
+3.	Make sure to find out a way to measure Churn (RA will do) and also growth metrics (like changing the baseline according to the growth of the dealers), scheme wise insights if possible etc.
+4.	Harshil tried to do something related to how much more to sell for a dealer to cross a slab and get the required benefits from the scheme provided, but it's complicated so if there is time then look into it.
+ 
+ 
+Stakeholders:
+-UH
+-TSEs
+-Systems 
+ 
+ 
+Amit discussion
+09 April 2025
+17:34
+ 
+1.	4 to 5 insights
+2.	Multiple market visits
+3.	Contact multiple stakeholders to get what they would like and want
+4.	The insights can be weekly, monthly or every 3 days also
+5.	Look at schemes also, and how to push the TSE's to ask dealers to buy using scheme data
+ 
+ 
+Shshank AM call
+14 April 2025
+10:23
+ 
+•	Wants the usual KPIs like OD, OS etc. In OD, wants active vs non active dealers having OD.
+•	NADA: New active dealer addition. Should target 5% and 10% growth for urban and upcountry territories respectively. Prorated monthly.
+•	Visit reports (CR and CR+ non CR)
+o	First week: % of Active dealers covered should be prioritized, and is also a KPI
+•	Prorated active contractors under unit head (Ly vs TY). Active contractor has done KYC in the app. Member is >5000 points
+•	Shop Share:  % of counter growth vs % of AP growth for the counter. CAGR can be used and base kept according to convenience.
+•	Product Ratios: Advanced paints sold/ base (or total)
+•	Value, Volume and emulsion KPIs: Target 15% for value volume KPIs, emulsion 20%.
+•	If doing a weekly target: 30,55,75 and 100% for the split.
+•	SLAs met, NPS as well.
+ 
+ 
+Yatish AM call
+15 April 2025
+15:13
+ 
+ 
+No pattern for notifications, need some pattern
+1.Planning information can be shared once in a month in the start of the month.
+2.Visit data - middle of the month
+1.	Contractor kpis he is fine with
+2.	Actual vs base vs plan
+3.	Active dealers not billed in last 10 days is inaccurate because some dealers have closed down it seems.
+4.	Essential Goals, emlusions, value, volume, visits, collections then complaints (weightage priority).
+5.	EG - specific categories we need to grow each year. Eg. Smartcare, wood finishes tools adhesives (>30% growth), wants less granular view of smartcare tools etc. now its just masking tape and all, which are very specific.
+6.	Advanced ratios is something he'd like to see.
+7.	He likes the idea of AI showing predicted yearly sales etc. according to targets
+8.	He wants planned data to also be shown along-side base data
+ 
+ 
+Karthik AM call
+16 April 2025
+10:41
+ 
+1st week - no of dealers billed territory wise
+2nd week- product wise report (less granularity) with targets. Doesn’t want planned
+3rd week- FP product display notification
+4th- overall value, volume collection and OD notifications 
+ 
+He’s okay with NADA and advanced ratio as well.
+ 
+ 
+Tharankeshavar AM call
+16 April 2025
+11:27
+ 
+•	App is not friendly for AM's, really nailed it for TSEs
+•	IBB tracking - inter brands billing, suppose stock is nearby depot ill bill to your depot if my depot doesn’t have stock. Allow to bill across depots. 
+•	The pain point here is, somewhere in the middle some thing gets missed. 4 mails have to  be dropped for each of the ibb 
+•	DHC - dealer health card. MoM type thing which was done physically and now its done in TAP app. Currently go to dealer, open visit page and then see DHC. Wants to see all DHC entries in a single page. Don’t want to go to every visit entry and see each dhc.
+•	Daily billing numbers is not reliable. It looks wrong. Some checking and validation has to be done. Territory level  value vs volume, give drop down based on categories (product level view), dealer level split as well would be helpful. Top 20 in each dealer.
+•	Dealer level OD notification daily for Ams. Eg. So many dealers came into OD today or cleared OD today. - Analytics
+•	Too many notifications. Don’t throw more than 10 notifications. 
+•	Dealers who did not bill for past 10 days is very important. - high, analytics
+•	Master view for territory vs product vs dealer is extremely important.
+•	Dealers coming to OD tomorrow is also important. CEI is good or bad paymasters.
+•	Retail audit happens at a counter level. 
+•	ROI calculator is not working. Itll be helpful to show ROI for dealer to showcase and help them visualize.
+•	Churn: competition counters me consistent drop in emulsion sales for 3 months and (&) retail audit data growth combined. For eg. If counter has yoy increase of berger , and past 3 months there is lets say decrease in emulsion sales, then it should show risk.
+•	He also wants monthly summaries and recommendations based on AI. Like what has happened and what to focus on.
+ 
+ 
+ 
+ 
+TSE Interaction
+14 April 2025
+11:05
+ 
+•	Existing insights he likes: OD, Emulsion not taken, CR not visited in 10 days
+•	Stock Status: wants a drop down feature and lesser granularity while viewing data
+•	Product - category level data: MTD for a dealer
+•	Likes the idea of product ratio type kpis for shift from distemper to economy emusion, emulsion to advanced etc.
+•	Sudden heavy drop in sales is churn according to him. Eg. 10 to 2 cr in a year. Risk of churn kpi is something he's interested in.
+•	UI issues
+•	Slab scheme KPI he was not interested in since he looks at excel to figure it out. But if excel is removed then reliance will come to the app.
+•	Overall, he feels like the app notifications is a value add for him and not a compulsory use case for him since he has overall excel data from the admin. Hence, not too bothered about nuances of the app.
+•	Adoption: Him and TSE's he's interacted with have used the features and have made decisions through it. 
+•	Text length can be more concise
+ 
+ - 
+
+Overall:
+ Potential things I can bring about using AI and ML algorithms for sales people.
+ 
+Insights that AI can bring:
+ 
+1.	Prediction of NADA for the future (instead of prorata, monthly targets can dynamically change as well through prediction, can do weekly dynamically changing targets as well).
+2.	Weightage association can change based on what the TSE has failed to do for a while and all as well.
+3.	Risk of OD can also be predicted for the future, also can predict using product ratios of which dealers to push advanced products etc etc.
+4.	Summary types. Model will reason and throw out relevant parameters and inputs month end
+
