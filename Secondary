@@ -88,3 +88,64 @@ Creating a platform with MR/ME to look at doctors, doctors hobbies personal info
  
 Metric - RCPA in pharma. Doctor accepts maybe he can vouch for 100 prescriptions, they’ll go to the chemist and verify if its sold or not.
 410210
+
+Perfect. Here’s the updated **Slide 5** with **only feasible, relevant insights** for Asian Paints — now including **GenAI use cases from Pharma** (Lupin) and **LLM-based use cases from Automotive** (Hero MotoCorp).
+
+---
+
+### **Slide 5: Cross-Industry Inspirations – Smart Sales Enablement for Asian Paints**  
+_Tailored insights from FMCG, Pharma & Automotive sectors_  
+
+---
+
+#### 🛍️ **FMCG Sector (Britannia, ITC, Mondelez, HUL, P&G, Marico)**
+
+- 📍 **Geolocation-Based Outlet Segmentation**  
+  → Cluster outlets using SKU mix + business volume for hyperlocal targeting  
+
+- 🛒 **AI-Driven SKU Recommendations (P&G, HUL)**  
+  → Recommend SKUs based on similar store profiles nearby  
+  → Personalize assortment planning to boost secondary sales  
+
+- 🔍 **Competitor Stock Capture (ITC)**  
+  → Collect rival SKU presence to gauge market share + identify upsell potential  
+
+- 🧪 **A/B Testing for New SKUs (Britannia)**  
+  → Use ML to select optimal pilot outlets; improves innovation success rate  
+
+- 🔄 **Depot Stock Visibility (Mondelez)**  
+  → Display depot-level stock and order dispatch info to field teams  
+
+- 📈 **Multi-Level Sales Forecasting (Marico)**  
+  → ML models for primary, secondary, and tertiary forecasting  
+  → Helps with inventory, procurement, and manufacturing alignment  
+
+---
+
+#### 🧬 **Pharma Sector (Lupin, Sun Pharma)**
+
+- 🤖 **GenAI-Enabled Sales Assistance**  
+  → GenAI aids field reps with intelligent talking points & follow-up messages  
+  → In Asian Paints: can be used to assist AMs/TSEs with pitch scripting, value props  
+
+- 🧠 **3-Phase Enablement Strategy**  
+  → Build data infra → Assist field force → Leverage data for strategic planning  
+
+---
+
+#### 🚗 **Automotive Sector (Hero MotoCorp)**
+
+- 📹 **Customer-Aware Selling**  
+  → Customers research products online — field team must match that knowledge  
+
+- 🆚 **LLM for Smart Comparison Pitches**  
+  → Auto-generated product comparisons vs. rival brands, tailored to customer type  
+  → Paint channel: LLM suggests how our product suits specific outlet/customer needs  
+
+- 📊 **LLM-Based Knowledge Retrieval**  
+  → LLMs trained on internal data can generate insights & answer queries in natural language  
+  → E.g., “Which product performed best in Tier-2 Tamil Nadu last monsoon?”  
+
+---
+
+Let me know when you're ready for **Slide 6: Final Solution (GenAI-driven Sales Assistant + Smart Store Targeting)** — happy to write that next!
