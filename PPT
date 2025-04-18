@@ -90,3 +90,43 @@ _Insights from AMs and TSEs – Aligned to Predictive Engine Solution_
 ---
 
 Would you like a **PowerPoint slide version (with formatting suggestion)** or shall we move to **Slide 5: Company Research** next?
+
+
+
+Got it! Here's a **refined and focused version of Slide 4**, with only the interview insights that directly tie into the **predictive solution**, such as churn alerts, dealer monitoring, territory-level forecasting, KPI visibility, and user-centric dashboard needs.
+
+---
+
+### **Slide 4: Interview Insights – Aligned with Predictive Solution Goals**  
+_Insights synthesized from AM and TSE interviews, highlighting pain points and asks that informed the predictive engine design._
+
+---
+
+📌 **Demand for Predictive KPIs**  
+- Strong interest in forecast-based metrics such as:  
+  - Predicted sales vs target  
+  - Dealer-level growth forecasting  
+  - Shop share and product mix trends (e.g., shift from base to advanced emulsions)  
+- Preference for forward-looking alerts:  
+  - Dealers likely to enter OD soon  
+  - Monthly summaries with AI-generated recommendations
+
+📌 **Churn Risk Identification**  
+- Churn seen as consistent drop in emulsion sales over 3 months, especially when coupled with competitor (e.g., Berger) growth via retail audits  
+- Suggested criteria for churn alerts: heavy sales drops, risk segments, counters with increasing competitor share  
+
+📌 **Territory & Dealer Monitoring Needs**  
+- Need for territory-specific dashboards with drilldowns to product and dealer-level performance  
+- Desire for daily or weekly insights on:  
+  - Dealers not billed in 10+ days  
+  - Dealers entering/clearing OD  
+  - Advanced product penetration by territory  
+
+📌 **Simplified & Actionable Views**  
+- Request for compact summaries over granular data – grouped SmartCare categories, top-performing SKUs, and category-level splits  
+- Preference for AI-powered nudges that focus AM/TSE attention on the right territories or dealers  
+- Ask for concise, clear notifications — maximum of 10 per user per day  
+
+---
+
+Let me know when you’re ready for **Slide 5: Industry Research Summary** — I can help break that down by sector too.
