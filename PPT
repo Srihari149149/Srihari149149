@@ -18,3 +18,23 @@ Sales insights are frequency-driven (daily/weekly) vs business-impact driven
 Lack of integration across data types — sales, visits, audit, competition
 
 No feedback loop from ground teams → system does not evolve or learn
+Perfect — here's a **cleaned-up version** of **Slide 4: Interview Insights** without the solution-mapping column, and only including the insights that are relevant to the solution you're building. This version focuses on what the stakeholders said, keeping it sharp and concise for presentation.
+
+---
+
+### **Slide 4: Ground Truth – Interview Insights**
+
+**Insights from Interviews with Area Managers and Field Staff (TSEs)**  
+*(Shashank, Yatish, Karthik, Tharankeshavar, TSE – 14–16 April 2025)*
+
+| Stakeholder         | Role                  | Key Insights                                                                                          |
+|---------------------|-----------------------|--------------------------------------------------------------------------------------------------------|
+| Shashank            | AM – Ghaziabad        | - Wants OD split into active vs non-active dealers<br>- Monthly NADA target: 5% (Urban), 10% (Upcountry)<br>- Week 1 CR visit coverage as a priority KPI<br>- Shop share and product ratio KPIs (e.g., Advanced/Base)<br>- Emulsion KPIs to be tracked separately from Value/Volume |
+| Yatish              | AM – Jaunpur          | - Notifications lack clear structure<br>- Wants planning data early in month, visit KPIs mid-month<br>- Emulsion, Essential Goals, Value/Volume, Collections, and Complaints ranked in priority<br>- Needs AI-predicted sales vs base and plan<br>- Wants category-level Essential Goals (e.g., adhesives, wood finishes) instead of granular items like masking tape |
+| Karthik             | AM – Kanpur           | - Weekly breakdown preferred: Week 1 - dealer billing, Week 2 - product-wise report, Week 4 - overall KPIs<br>- Supports NADA and advanced ratio as KPIs |
+| Tharankeshavar      | AM – Moradabad        | - Daily OD insights and top dealers needed<br>- Predictive alert for dealers expected to enter OD<br>- Dealers not billed in past 10 days is important<br>- Territory → Product → Dealer master view needed<br>- Wants monthly summaries and AI-driven recommendations<br>- Churn = 3-month emulsion drop + competitor retail audit growth |
+| TSE                 | Field Staff           | - Follows OD and Emulsion-not-taken alerts<br>- Likes product ratio KPIs (e.g., shift from distemper to emulsion)<br>- Defines churn as sudden drop in sales (e.g., ₹10Cr to ₹2Cr)<br>- Adoption good among TSEs if insights remain actionable and not overly granular |
+
+---
+
+Would you like a visual element here like quote bubbles, region tags, or icon flags for AM vs TSE? Or should I move ahead with Slide 6 (Company Research)?
