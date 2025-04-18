@@ -1,0 +1,90 @@
+Companies tracker
+14 April 2025
+12:57
+ 
+1.	HUL - Murali - Tommorow
+2.	PnG - Raghav Ahuja - Tonight- no such ai or predictive analytics in png, just runs (incentive based)
+3.	Mondelez
+a.	Talk with Meet - 15/04/2025 - 7 PM
+4.	Marico - Himaja evening talk - not much in the sales app it seems, might get to ask Roshini
+5.	Colgate (Maybe?)
+6.	Dr. Reddy's -remind potti today evening
+7.	Reckitt
+8.	Lupin - just use apps for pitching. Orders and tracking is done physically through books. Call with Kshitij pending.
+ 
+ 
+ 
+Brittania, ITC, Mondelez
+16 April 2025
+16:42
+ 
+Geolocation - categorizing outlets based on how they buy, what sku mix level. Basically classifying based on SKU mix and business volume. Capture location and give recommendation.
+ 
+Capture stock of competition skus in store compulsorily - stock of skus in competition. Through this you calculate market share, but also predict how my sku is doing compare to his. Eiter you are going weak or im going strong. So can incentivise to sell this more because it has organically grown and how much it can grow. - Only ITC
+ 
+Also if some strawberry biscuit is being sold in an outlet compared to an outlet not selling strawberry biscuits, I would pick that outlet to sell my biscuit cuz already customer base is there
+ 
+Pilot testing of new skus - A/B testing also they do. Colour code: orange. Main skus are tagged green. AI/ ML chooses which outlet to pilot in. for eg. If you test in 1000/120000 outlets it choose what to pick. Basically you want it to be as random as possible. 
+ 
+Mondelez - distributor app can see OD and all, stock is left at distributor end can be seen by sales people. In our case, depot stock maybe can be a metric that sales people can look at. 
+ 
+Supply chain  - ITC 
+ 
+AI/ML - demand planning
+Warehouse space utilization is less - AI will tell you it is less, and itll tell ABC vehicle to get unloaded.
+ 
+ 
+ 
+HUL, P&G
+17 April 2025
+10:12
+ 
+•	They have Algorithms to decide less frequently bought SKUs to recommend to the retailers.
+•	AI/ML algorithms recommend SKU's to buy based on what other stores of the same type. i.e of same volume and assortment mix buy in their neighbourhood. This makes it easy to push for the sales people.
+•	Have mechanisms to check stores who are constantly placing less and less orders and will recommend the sales man to go visit those stores.
+•	No push notification system
+•	Store onboarding also can be done via the app.
+•	P&G - Smartbasket -knn, clustering 
+P&G India’s Smart Basket – Summary
+• Purpose: Helps 2M+ kirana stores stock the right products using AI/ML.
+• How it works:
+• Analyzes sales, demand, and location-specific data.
+• Uses AI/ML algorithms to predict consumer preferences.
+• Applies geo-spatial analytics for local relevance.
+• Recommends tailored product assortments per store.
+• Benefits:
+• Boosts product availability and consumer satisfaction.
+• Reduces unsold inventory and increases store profits.
+• Enables efficient supply planning for distributors.
+ 
+ 
+ 
+Marico
+17 April 2025
+10:26
+ 
+from sales perspective we are doing demand forecasting for primary, secondary and tertiary sales. For that we use data science and ML models. That helps in better inventory planning and management, procurement, manufacturing etc.
+ 
+ 
+Lupin
+17 April 2025
+11:14
+ 
+•	Very sales heavy company
+•	Most sales come from MR and ME's through built up relationships
+•	Most sales come from generic medicines, sold through MR and ME's
+•	They realized this can't keep going.
+•	Change management happened. Now trying to introduce good tech infra
+•	Now building up data lake and 
+•	GenAI model to help MR and ME make better decisions
+•	Assist MR and ME and help them increase their in clinic time with doctors. GenAI gives good talking points with the doctor, improve communications by giving MR and ME options to send emails with meeting notes and thank you notes.
+•	Other use case is to help the strategic team come up with plans, 
+•	3 step vision: infra, helping mr and me improve sales, use data that you collect to improve strategy teams to come up with better strategy
+•	Improving sales/doctor is considered the factor of growth. Now theyre trying to expand to others as well using AI/ML
+Sun Pharma - using AI/ ML. Sun pharma influenced the GenAI inclusion in Lupin
+ 
+ 
+Creating a platform with MR/ME to look at doctors, doctors hobbies personal info and professional info, like the research they were doing and all that. It had email marketing info, if theyre responding to their emails messages etc. 
+ 
+Metric - RCPA in pharma. Doctor accepts maybe he can vouch for 100 prescriptions, they’ll go to the chemist and verify if its sold or not.
+410210
