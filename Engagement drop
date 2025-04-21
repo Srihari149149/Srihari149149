@@ -1,16 +1,65 @@
+# STEP 1: Imports
 import pandas as pd
+import numpy as np
+from datetime import datetime
+import matplotlib.pyplot as plt
 
-# Load your file
-df = pd.read_excel('your_file.xlsx')  # adjust path if needed
+# STEP 2: Load Data
+# Upload your actual Excel/CSV instead of this placeholder
+df = pd.read_csv("your_file.csv")
 
-# Rename relevant columns
-df.rename(columns={
-    'netprice': 'Sales Value',
-    'dealer code with name': 'Dealer Code',
-    'material code': 'Product Code',
-    'Date': 'Invoice Date'
-}, inplace=True)
+# STEP 3: Preprocess
+df.rename(columns={"value": "sales_value"}, inplace=True)
+df["date"] = pd.to_datetime(df["date"])
+df["month"] = df["date"].dt.to_period("M")
 
-# Convert Invoice Date and extract Month
-df['Invoice Date'] = pd.to_datetime(df['Invoice Date'], dayfirst=True, errors='coerce')
-df['Month'] = df['Invoice Date'].dt.to_period('M')
+# STEP 4: Monthly Aggregation (Dealer level)
+monthly_summary = df.groupby(["dealer_id", "month"]).agg({
+    "sales_value": "sum",
+    "volume": "sum"
+}).reset_index()
+
+monthly_summary.sort_values(by=["dealer_id", "month"], inplace=True)
+monthly_summary["value_pct_change"] = monthly_summary.groupby("dealer_id")["sales_value"].pct_change()
+monthly_summary["volume_pct_change"] = monthly_summary.groupby("dealer_id")["volume"].pct_change()
+
+# STEP 5: Detect Drops
+drop_threshold = -0.3  # You can make this dynamic later
+monthly_summary["value_drop_flag"] = monthly_summary["value_pct_change"] < drop_threshold
+monthly_summary["volume_drop_flag"] = monthly_summary["volume_pct_change"] < drop_threshold
+
+dealer_drops = monthly_summary[
+    (monthly_summary["value_drop_flag"]) | (monthly_summary["volume_drop_flag"])
+].copy()
+dealer_drops["notification_type"] = "Dealer Engagement Drop"
+
+# STEP 6: Product Category-Level Analysis
+category_summary = df.groupby(["dealer_id", "month", "product_category"]).agg({
+    "sales_value": "sum",
+    "volume": "sum"
+}).reset_index()
+
+category_summary.sort_values(by=["dealer_id", "product_category", "month"], inplace=True)
+category_summary["value_pct_change"] = category_summary.groupby(["dealer_id", "product_category"])["sales_value"].pct_change()
+category_summary["volume_pct_change"] = category_summary.groupby(["dealer_id", "product_category"])["volume"].pct_change()
+
+category_summary["value_drop_flag"] = category_summary["value_pct_change"] < drop_threshold
+category_summary["volume_drop_flag"] = category_summary["volume_pct_change"] < drop_threshold
+
+category_drops = category_summary[
+    (category_summary["value_drop_flag"]) | (category_summary["volume_drop_flag"])
+].copy()
+category_drops["notification_type"] = "Product Category Engagement Drop"
+
+# STEP 7: Combine All Notifications
+final_notifications = pd.concat([
+    dealer_drops[["dealer_id", "month", "sales_value", "volume", "value_pct_change", "volume_pct_change", "notification_type"]],
+    category_drops[["dealer_id", "month", "product_category", "sales_value", "volume", "value_pct_change", "volume_pct_change", "notification_type"]]
+], ignore_index=True)
+
+# STEP 8: Output Notifications
+print("🔔 Sudden Drop Notifications:")
+display(final_notifications)
+
+# Optional: Save to CSV for dashboard/emailing
+final_notifications.to_csv("notifications.csv", index=False)
