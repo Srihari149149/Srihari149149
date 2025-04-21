@@ -63,3 +63,38 @@ display(final_notifications)
 
 # Optional: Save to CSV for dashboard/emailing
 final_notifications.to_csv("notifications.csv", index=False)
+
+
+# Group by dealer and notification type
+grouped_notifications = final_notifications.groupby(
+    ['dealer code', 'notification_type']
+).agg({
+    'month': 'first',
+    'sales_value': 'sum',
+    'volume': 'sum',
+    'value_pct_change': 'mean',
+    'volume_pct_change': 'mean',
+    'product category': lambda x: ', '.join(sorted(set(x)))  # Combine product categories
+}).reset_index()
+
+# Rename for clarity
+grouped_notifications.rename(columns={
+    'product category': 'affected_product_categories'
+}, inplace=True)
+
+# Show the final grouped notifications
+print("Grouped Sudden Drop Notifications:")
+display(grouped_notifications)
+
+# Step: Create Custom Notification Messages
+grouped_notifications['notification_message'] = grouped_notifications.apply(
+    lambda row: (
+        f"ALERT: Sales value/volume dropped for dealer {row['dealer code']} in {row['month']}. "
+        f"Affected categories: {row['affected_product_categories']}. "
+        f"Value dropped by {row['value_pct_change']:.1%}, volume dropped by {row['volume_pct_change']:.1%}. "
+        f"Please investigate and take corrective action."
+    ), axis=1
+)
+
+# Display Final Output
+display(grouped_notifications[['dealer code', 'notification_message']])
