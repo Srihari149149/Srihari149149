@@ -119,3 +119,67 @@ summary_notifications['summary_message'] = summary_notifications.apply(
 # Display the output
 display(summary_notifications[['month', 'notification_type', 'summary_message']])
 
+
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+
+# Step 0: Read and prepare data
+df = data.copy()  # Assume `data` is your existing DataFrame from descriptive part
+
+# Sort and prepare
+df['month'] = pd.to_datetime(df['month'])
+df = df.sort_values(['dealer code', 'product category', 'month'])
+
+# Step 1: Feature Engineering
+df['value_lag1'] = df.groupby(['dealer code', 'product category'])['sales_value'].shift(1)
+df['volume_lag1'] = df.groupby(['dealer code', 'product category'])['volume'].shift(1)
+
+df['value_pct_change'] = (df['sales_value'] - df['value_lag1']) / df['value_lag1']
+df['volume_pct_change'] = (df['volume'] - df['volume_lag1']) / df['volume_lag1']
+
+df['value_roll_mean_2'] = df.groupby(['dealer code', 'product category'])['sales_value'].shift(1).rolling(2).mean()
+df['volume_roll_mean_2'] = df.groupby(['dealer code', 'product category'])['volume'].shift(1).rolling(2).mean()
+
+# Step 2: Create Binary Target Column
+df['engagement_drop'] = ((df['value_pct_change'] < -0.3) | (df['volume_pct_change'] < -0.3)).astype(int)
+
+# Drop rows with NA
+ml_data = df.dropna(subset=['value_lag1', 'volume_lag1', 'value_pct_change', 'volume_pct_change',
+                            'value_roll_mean_2', 'volume_roll_mean_2', 'engagement_drop'])
+
+# Step 3: Model Training
+features = ['value_lag1', 'volume_lag1', 'value_pct_change', 'volume_pct_change', 'value_roll_mean_2', 'volume_roll_mean_2']
+X = ml_data[features]
+y = ml_data['engagement_drop']
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print("📊 Classification Report:\n", classification_report(y_test, y_pred))
+
+# Step 4: Predict on Full Data
+ml_data['drop_prob'] = model.predict_proba(X_scaled)[:, 1]
+
+# Show top risky items
+alerts = ml_data[ml_data['drop_prob'] > 0.6][['dealer code', 'product category', 'drop_prob', 'month']]
+
+# Step 5: Generate Notification Messages
+alerts['notification'] = alerts.apply(
+    lambda x: f"🔔 Product category engagement drop likely for '{x['product category']}' at dealer '{x['dealer code']}' in {x['month'].strftime('%B')}. Risk: {x['drop_prob']*100:.1f}%.", axis=1
+)
+
+# View final alerts
+alerts = alerts.sort_values(by='drop_prob', ascending=False).reset_index(drop=True)
+alerts[['dealer code', 'product category', 'drop_prob', 'notification']]
+
+
