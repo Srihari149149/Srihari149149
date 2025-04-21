@@ -98,3 +98,24 @@ grouped_notifications['notification_message'] = grouped_notifications.apply(
 
 # Display Final Output
 display(grouped_notifications[['dealer code', 'notification_message']])
+
+# Group by month and notification_type to summarize dealers and product categories
+summary_notifications = grouped_notifications.groupby(
+    ['month', 'notification_type']
+).agg({
+    'dealer code': lambda x: ', '.join(sorted(set(map(str, x)))),
+    'product category': lambda x: ', '.join(sorted(set(x)))
+}).reset_index()
+
+# Format and generate the final message
+summary_notifications['summary_message'] = summary_notifications.apply(
+    lambda row: (
+        f"🔔 {row['notification_type']} for {row['product category']} in {row['month']}.\n"
+        f"Affected dealers: {row['dealer code']}.\n"
+        f"Sales value or volume dropped by over 30%. Please visit these dealers and investigate low engagement."
+    ), axis=1
+)
+
+# Display the output
+display(summary_notifications[['month', 'notification_type', 'summary_message']])
+
