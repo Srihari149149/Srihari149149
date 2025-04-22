@@ -193,10 +193,15 @@ if len(month_list) >= 4:
         predict_data['drop_prob'] = model.predict_proba(X_predict_scaled)[:, 1]
 
         # STEP 7: Generate Notification Messages
-        predict_data['notification'] = predict_data.apply(
-            lambda row: f"🔔 Product category engagement drop likely for '{row['product category']}' at dealer '{row['dealer code']}' in {row['month'].strftime('%B')}. Risk: {row['drop_prob']*100:.1f}%.",
-            axis=1
-        )
+   # Shift prediction label to next month (Month 4)
+        predict_data['predicted_month'] = predict_data['month'] + pd.DateOffset(months=1)
+
+# Generate notification message using predicted_month instead of actual data month
+    predict_data['notification'] = predict_data.apply(
+    lambda row: f"🔔 Product category engagement drop likely for '{row['product category']}' at dealer '{row['dealer code']}' in {row['predicted_month'].strftime('%B')}. Risk: {row['drop_prob']*100:.1f}%.",
+    axis=1
+)
+
 
         # STEP 8: Output
         output = predict_data[['dealer code', 'product category', 'month', 'drop_prob', 'notification']]
