@@ -130,6 +130,11 @@ from sklearn.preprocessing import StandardScaler
 # STEP 0: Sort and prepare your existing data
 df = df.sort_values(['dealer code', 'product category', 'month'])
 
+df = df.groupby(['dealer code', 'product category', 'month'], as_index=False).agg({
+    'sales_value': 'sum',
+    'volume': 'sum'
+})
+
 # STEP 1: Feature Engineering
 df['value_lag1'] = df.groupby(['dealer code', 'product category'])['sales_value'].shift(1)
 df['volume_lag1'] = df.groupby(['dealer code', 'product category'])['volume'].shift(1)
