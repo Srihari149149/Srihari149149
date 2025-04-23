@@ -103,3 +103,20 @@ for dealer, group in monthly_6m.groupby('dealer code'):
 # STEP 6: Final Output
 push_df = pd.DataFrame(final_trends)
 display(push_df)
+
+# Generate notifications for dealers with push potential = 1
+notification_df = push_df.copy()
+
+# Ensure target column exists
+if 'target_push_potential' in notification_df.columns:
+    notification_df = notification_df[notification_df['target_push_potential'] == 1].copy()
+
+    notification_df['notification'] = notification_df.apply(
+        lambda row: f"🚀 Dealer {row['dealer code']} has shown a consistent rise in premium product adoption and overall performance. Recommend promoting advanced SKUs in upcoming visits.",
+        axis=1
+    )
+
+    display(notification_df[['dealer code', 'notification']])
+else:
+    print("❌ 'target_push_potential' column not found. Please rerun the push potential logic.")
+
