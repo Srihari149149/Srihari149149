@@ -39,3 +39,15 @@ merged_df['is_advanced'] = merged_df['advance_flag'].apply(lambda x: 1 if str(x)
 # === Step 6: Preview the merged data ===
 
 merged_df[['material code', 'product_code', 'dealer code', 'sales_value', 'volume', 'month', 'is_advanced']].head()
+
+monthly_agg = merged_df.groupby(['dealer code', 'month']).agg(
+    total_sales_value=('sales_value', 'sum'),
+    total_volume=('volume', 'sum'),
+    advanced_sales_value=('sales_value', lambda x: x[merged_df.loc[x.index, 'is_advanced'] == 1].sum()),
+    advanced_volume=('volume', lambda x: x[merged_df.loc[x.index, 'is_advanced'] == 1].sum())
+).reset_index()
+
+print("Monthly Aggregated Shape (before lags):", monthly_agg.shape)
+print("Monthly Aggregated Sample:")
+print(monthly_agg.head())
+
