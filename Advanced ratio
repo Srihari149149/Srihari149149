@@ -50,4 +50,39 @@ monthly_agg = merged_df.groupby(['dealer code', 'month']).agg(
 print("Monthly Aggregated Shape (before lags):", monthly_agg.shape)
 print("Monthly Aggregated Sample:")
 print(monthly_agg.head())
+# Step 1: Sort the data properly for time-based operations
+monthly_agg = monthly_agg.sort_values(['dealer code', 'month'])
+
+# Step 2: Create lag features (previous month values)
+monthly_agg['advanced_ratio_value'] = monthly_agg['advanced_sales_value'] / monthly_agg['total_sales_value']
+monthly_agg['advanced_ratio_value_lag'] = monthly_agg.groupby('dealer code')['advanced_ratio_value'].shift(1)
+monthly_agg['advanced_sales_value_lag'] = monthly_agg.groupby('dealer code')['advanced_sales_value'].shift(1)
+monthly_agg['advanced_volume_lag'] = monthly_agg.groupby('dealer code')['advanced_volume'].shift(1)
+monthly_agg['total_sales_value_lag'] = monthly_agg.groupby('dealer code')['total_sales_value'].shift(1)
+monthly_agg['total_volume_lag'] = monthly_agg.groupby('dealer code')['total_volume'].shift(1)
+
+# Step 3: Calculate growth and change metrics
+monthly_agg['advanced_value_growth'] = (monthly_agg['advanced_sales_value'] - monthly_agg['advanced_sales_value_lag']) / monthly_agg['advanced_sales_value_lag']
+monthly_agg['advanced_volume_growth'] = (monthly_agg['advanced_volume'] - monthly_agg['advanced_volume_lag']) / monthly_agg['advanced_volume_lag']
+monthly_agg['total_value_growth'] = (monthly_agg['total_sales_value'] - monthly_agg['total_sales_value_lag']) / monthly_agg['total_sales_value_lag']
+monthly_agg['total_volume_growth'] = (monthly_agg['total_volume'] - monthly_agg['total_volume_lag']) / monthly_agg['total_volume_lag']
+monthly_agg['adv_ratio_value_change'] = monthly_agg['advanced_ratio_value'] - monthly_agg['advanced_ratio_value_lag']
+
+# Step 4: Define future-based columns for creating the label
+monthly_agg['future_ratio_value'] = monthly_agg.groupby('dealer code')['advanced_ratio_value'].shift(-1)
+monthly_agg['future_advanced_volume'] = monthly_agg.groupby('dealer code')['advanced_volume'].shift(-1)
+
+# Step 5: Create the label — 1 if next month ratio ↑ > 20% AND advanced volume ↑
+monthly_agg['target_push_potential'] = (
+    (monthly_agg['future_ratio_value'] - monthly_agg['advanced_ratio_value']) > 0.20
+) & (
+    monthly_agg['future_advanced_volume'] > monthly_agg['advanced_volume']
+)
+monthly_agg['target_push_potential'] = monthly_agg['target_push_potential'].astype(int)
+
+# Step 6: Drop rows with essential NaNs for modeling
+model_data = monthly_agg.dropna(subset=[
+    'advanced_ratio_value_lag',
+    'target_push_potential'
+])
 
