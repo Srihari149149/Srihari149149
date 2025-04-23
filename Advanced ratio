@@ -50,53 +50,56 @@ monthly_agg['advanced_ratio_value'] = monthly_agg['advanced_sales_value'] / mont
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-# STEP 1: Sort and add month number per dealer
+# STEP 1: Monthly Aggregation (if not already done)
+# Note: Use your actual merged DataFrame name here instead of `merged_df`
+monthly_agg = merged_df.groupby(['dealer code', 'month']).agg(
+    total_sales_value=('sales_value', 'sum'),
+    total_volume=('volume', 'sum'),
+    advanced_sales_value=('sales_value', lambda x: x[merged_df.loc[x.index, 'is_advanced'] == 1].sum()),
+    advanced_volume=('volume', lambda x: x[merged_df.loc[x.index, 'is_advanced'] == 1].sum())
+).reset_index()
+
+monthly_agg['advanced_ratio_value'] = monthly_agg['advanced_sales_value'] / monthly_agg['total_sales_value']
+
+# STEP 2: Sort and assign month_num per dealer
 monthly_agg = monthly_agg.sort_values(['dealer code', 'month'])
 monthly_agg['month_num'] = monthly_agg.groupby('dealer code').cumcount() + 1
 
-# STEP 2: Take last 6 months per dealer
+# STEP 3: Filter last 6 months per dealer
 monthly_6m = monthly_agg.groupby('dealer code').tail(6).copy()
 
-# STEP 3: Define slope and growth functions
-def compute_adv_ratio_slope(df):
-    x = df['month_num'].values.reshape(-1, 1)
-    y = df['advanced_ratio_value'].values
-    if len(x) < 2 or pd.isna(y).sum() > 1:
+# STEP 4: Define slope function
+def compute_slope(x, y):
+    if x.isna().any() or y.isna().any() or len(x) < 2:
         return None
+    x = x.values.reshape(-1, 1)
+    y = y.values
     model = LinearRegression()
     model.fit(x, y)
     return model.coef_[0]
 
-def compute_growth(start, end):
-    if start == 0 or pd.isna(start) or pd.isna(end):
-        return None
-    return (end - start) / start
-
-# STEP 4: Calculate metrics for each dealer
+# STEP 5: Compute slopes and target
 final_trends = []
 
 for dealer, group in monthly_6m.groupby('dealer code'):
     group = group.sort_values('month')
-    adv_slope = compute_adv_ratio_slope(group)
-    value_growth = compute_growth(group['total_sales_value'].iloc[0], group['total_sales_value'].iloc[-1])
-    volume_growth = compute_growth(group['total_volume'].iloc[0], group['total_volume'].iloc[-1])
+    adv_slope = compute_slope(group['month_num'], group['advanced_ratio_value'])
+    value_slope = compute_slope(group['month_num'], group['total_sales_value'])
+    volume_slope = compute_slope(group['month_num'], group['total_volume'])
     
-    # Push potential logic
     target = int(
         (adv_slope is not None and adv_slope >= 0.05) and 
-        ((value_growth is not None and value_growth > 0) or (volume_growth is not None and volume_growth > 0))
+        ((value_slope is not None and value_slope > 0) or (volume_slope is not None and volume_slope > 0))
     )
     
     final_trends.append({
         'dealer code': dealer,
         'adv_ratio_slope': adv_slope,
-        'value_growth_pct': value_growth,
-        'volume_growth_pct': volume_growth,
+        'value_slope': value_slope,
+        'volume_slope': volume_slope,
         'target_push_potential': target
     })
 
-# STEP 5: Final output as DataFrame
+# STEP 6: Final Output
 push_df = pd.DataFrame(final_trends)
 display(push_df)
-
-
