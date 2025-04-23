@@ -47,40 +47,56 @@ monthly_agg = merged_df.groupby(['dealer code', 'month']).agg(
 # STEP 2: Advanced Ratio
 monthly_agg['advanced_ratio_value'] = monthly_agg['advanced_sales_value'] / monthly_agg['total_sales_value']
 
-
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-# Step 3: Sort and assign month number
+# STEP 1: Sort and add month number per dealer
 monthly_agg = monthly_agg.sort_values(['dealer code', 'month'])
 monthly_agg['month_num'] = monthly_agg.groupby('dealer code').cumcount() + 1
 
-# Step 4: Define slope function
-def compute_slope(x, y):
-    if x.isna().any() or y.isna().any() or len(x) < 2:
+# STEP 2: Take last 6 months per dealer
+monthly_6m = monthly_agg.groupby('dealer code').tail(6).copy()
+
+# STEP 3: Define slope and growth functions
+def compute_adv_ratio_slope(df):
+    x = df['month_num'].values.reshape(-1, 1)
+    y = df['advanced_ratio_value'].values
+    if len(x) < 2 or pd.isna(y).sum() > 1:
         return None
-    x = x.values.reshape(-1, 1)
-    y = y.values
     model = LinearRegression()
     model.fit(x, y)
     return model.coef_[0]
 
-# Step 5: Compute slopes for ratio, value, and volume
-trend_df = monthly_agg.groupby('dealer code').apply(
-    lambda g: pd.Series({
-        'adv_ratio_slope': compute_slope(g['month_num'], g['advanced_ratio_value']),
-        'value_slope': compute_slope(g['month_num'], g['total_sales_value']),
-        'volume_slope': compute_slope(g['month_num'], g['total_volume']),
+def compute_growth(start, end):
+    if start == 0 or pd.isna(start) or pd.isna(end):
+        return None
+    return (end - start) / start
+
+# STEP 4: Calculate metrics for each dealer
+final_trends = []
+
+for dealer, group in monthly_6m.groupby('dealer code'):
+    group = group.sort_values('month')
+    adv_slope = compute_adv_ratio_slope(group)
+    value_growth = compute_growth(group['total_sales_value'].iloc[0], group['total_sales_value'].iloc[-1])
+    volume_growth = compute_growth(group['total_volume'].iloc[0], group['total_volume'].iloc[-1])
+    
+    # Push potential logic
+    target = int(
+        (adv_slope is not None and adv_slope >= 0.05) and 
+        ((value_growth is not None and value_growth > 0) or (volume_growth is not None and volume_growth > 0))
+    )
+    
+    final_trends.append({
+        'dealer code': dealer,
+        'adv_ratio_slope': adv_slope,
+        'value_growth_pct': value_growth,
+        'volume_growth_pct': volume_growth,
+        'target_push_potential': target
     })
-).reset_index()
 
-# Step 6: Merge slope results back into monthly_agg
-monthly_agg = pd.merge(monthly_agg, trend_df, on='dealer code', how='left')
+# STEP 5: Final output as DataFrame
+push_df = pd.DataFrame(final_trends)
+display(push_df)
 
-# Step 7: Define refined push potential logic
-monthly_agg['target_push_potential'] = (
-    (monthly_agg['adv_ratio_slope'] >= 0.05) & 
-    ((monthly_agg['value_slope'] > 0) | (monthly_agg['volume_slope'] > 0))
-).astype(int)
 
-# -------------------------------------------------------------------
-# ✅ Now you can use monthly_agg['target_push_potential'] as your label
