@@ -1,0 +1,41 @@
+import pandas as pd
+
+# === Step 1: Read the Excel files ===
+
+# Replace these paths with your actual file paths
+sales_file = "path_to_your_sales_file.xlsx"
+mapping_file = "path_to_your_mapping_file.xlsx"
+
+# Read files (assumes data starts from first row, change sheet_name if needed)
+sales_df = pd.read_excel(sales_file)
+mapping_df = pd.read_excel(mapping_file)
+
+# === Step 2: Clean and prepare mapping file ===
+
+# Rename columns for clarity
+mapping_df.columns = ['product_code', 'subcategory', 'advance_flag', 'total_flag']
+
+# Convert product code to string (some may be integers)
+mapping_df['product_code'] = mapping_df['product_code'].astype(str).str.strip()
+
+# === Step 3: Extract join key from material code in sales data ===
+
+# If product code is first 2 digits of material code
+sales_df['product_code'] = sales_df['material code'].astype(str).str[:2]  # or [:4] if required
+
+# === Step 4: Merge sales data with product mapping ===
+
+merged_df = pd.merge(
+    sales_df,
+    mapping_df[['product_code', 'advance_flag']],
+    on='product_code',
+    how='left'
+)
+
+# === Step 5: Create is_advanced flag ===
+
+merged_df['is_advanced'] = merged_df['advance_flag'].apply(lambda x: 1 if str(x).strip().upper() == 'A' else 0)
+
+# === Step 6: Preview the merged data ===
+
+merged_df[['material code', 'product_code', 'dealer code', 'sales_value', 'volume', 'month', 'is_advanced']].head()
