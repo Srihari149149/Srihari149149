@@ -120,3 +120,53 @@ if 'target_push_potential' in notification_df.columns:
 else:
     print("❌ 'target_push_potential' column not found. Please rerun the push potential logic.")
 
+# ⬇️ Place this AFTER your existing push potential logic
+
+# STEP 1: Sort and assign month numbers
+monthly_agg = monthly_agg.sort_values(['dealer code', 'month'])
+monthly_agg['month_num'] = monthly_agg.groupby('dealer code').cumcount() + 1
+
+# STEP 2: Take last 6 months per dealer
+monthly_6m = monthly_agg.groupby('dealer code').tail(6).copy()
+
+# STEP 3: Slope function
+def compute_slope(x, y):
+    if x.isna().any() or y.isna().any() or len(x) < 2:
+        return None
+    x = x.values.reshape(-1, 1)
+    y = y.values
+    model = LinearRegression()
+    model.fit(x, y)
+    return model.coef_[0]
+
+# STEP 4: Logic to detect drop in advanced ratio despite stable volume
+decline_insights = []
+
+for dealer, group in monthly_6m.groupby('dealer code'):
+    group = group.sort_values('month')
+    if len(group) < 6:
+        continue
+
+    first_half = group.iloc[:3]   # months 6→4
+    second_half = group.iloc[3:]  # months 3→1
+
+    adv_early_slope = compute_slope(first_half['month_num'], first_half['advanced_ratio_value'])
+    adv_late_slope = compute_slope(second_half['month_num'], second_half['advanced_ratio_value'])
+    volume_late_slope = compute_slope(second_half['month_num'], second_half['total_volume'])
+
+    if (
+        adv_early_slope is not None and adv_early_slope >= 0 and
+        adv_late_slope is not None and adv_late_slope < 0 and
+        volume_late_slope is not None and volume_late_slope >= 0
+    ):
+        decline_insights.append({
+            'dealer code': dealer,
+            'adv_ratio_early_slope': adv_early_slope,
+            'adv_ratio_late_slope': adv_late_slope,
+            'volume_slope_last3': volume_late_slope,
+            'notification': f"⚠️ Dealer {dealer} previously showed interest in premium SKUs, but recent data indicates a dip in advanced product focus despite healthy volume. Re-engagement recommended."
+        })
+
+# STEP 5: Display final insight output
+decline_df = pd.DataFrame(decline_insights)
+display(decline_df)
