@@ -1,1 +1,22 @@
+import pandas as pd
+
+# Step 1: Load all sheets from Excel
+file_path = "your_file.xlsx"  # change this to your filename
+all_sheets = pd.read_excel(file_path, sheet_name=None)
+
+# Step 2: Combine all sheets into one DataFrame
+combined_df = pd.concat(
+    [df.assign(sheet_name=sheet_name) for sheet_name, df in all_sheets.items()],
+    ignore_index=True
+)
+
+# Step 3: Optional - Add a numeric week number
+combined_df['week_num'] = combined_df['sheet_name'].str.extract(r'(\d+)').astype(int)
+
+# Step 4: Clean column names if needed
+combined_df.columns = combined_df.columns.str.strip().str.lower().str.replace(' ', '_')
+
+# View the cleaned, stacked data
+combined_df = combined_df.sort_values(['dealer_code', 'week_num'])
+display(combined_df.head())
 
