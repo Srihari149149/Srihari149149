@@ -121,17 +121,18 @@ od_complete['was_in_od_last_week'] = (
 # 2.7 OD Days in last 3 weeks (no of weeks OD > 0)
 # Sort properly
 od_complete = od_complete.sort_values(['dealer_code', 'week_num'], ascending=[True, False])
-def rolling_sum_past_weeks(x):
-    # Reverse the weeks inside each dealer
-    x_rev = x[::-1]
-    rolled = x_rev.rolling(window=3, min_periods=1).sum()
-    return rolled[::-1]  # Flip back after rolling
+od_complete['od_days_last3w'] = 0
 
-# OD days last 3 weeks (fixed)
-od_complete['od_days_last3w'] = (
-    od_complete
-    .groupby('dealer_code')['od_flag']
-    .transform(rolling_sum_past_weeks).sum())
+for dealer, group in od_complete.groupby('dealer_code'):
+    group = group.sort_values('week_num', ascending=True)
+
+    od_days = []
+
+    for idx in range(len(group)):
+        future_flags = group['od_flag'].iloc[idx+1 : idx+4]
+        od_days.append(future_flags.sum())
+
+    od_complete.loc[group.index, 'od_days_last3w'] = od_days
 
 )
 # Step 3: Target Label Creation
