@@ -197,6 +197,17 @@ dealer_summary_past = past_weeks_df.groupby('dealer_code').agg({
 dealer_summary_past.columns = ['_'.join(col).strip() for col in dealer_summary_past.columns.values]
 dealer_summary_past = dealer_summary_past.reset_index()
 
+# Remove dealers who were completely absent in past weeks
+dealer_summary_past = dealer_summary_past[
+    ~(
+        (dealer_summary_past['net_over_due_mean'] == 0) & 
+        (dealer_summary_past['net_over_due_max'] == 0) & 
+        (dealer_summary_past['net_over_due_min'] == 0)
+    )
+]
+
+print(f"✅ After removing blank dealers, {dealer_summary_past.shape[0]} dealers remain.")
+
 # Step 4: Get Target from Week 1 OD
 week1_df = od_complete[od_complete['week_num'] == 1][['dealer_code', 'net_over_due']]
 week1_df['will_go_od_next_week'] = (week1_df['net_over_due'] > 0).astype(int)
