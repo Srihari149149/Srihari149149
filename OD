@@ -184,7 +184,16 @@ latest_week_df = od_complete[od_complete['week_num'] == latest_week][['dealer_co
 
 dealer_summary = dealer_summary.merge(latest_week_df, on='dealer_code', how='left')
 
-dealer_summary['will_go_od_next_week'] = (dealer_summary['net_over_due'] > 0).astype(int)
+# --- Step: Filter only dealers NOT already in OD in latest week ---
+
+dealer_summary['currently_in_od'] = (dealer_summary['net_over_due'] > 0).astype(int)
+
+# Filter dealers NOT currently in OD
+dealer_summary_filtered = dealer_summary[dealer_summary['currently_in_od'] == 0]
+
+# Drop unnecessary columns
+dealer_summary_filtered = dealer_summary_filtered.drop(columns=['currently_in_od', 'net_over_due'])
+
 
 # Drop extra net_over_due
 dealer_summary = dealer_summary.drop(columns=['net_over_due'])
