@@ -148,7 +148,7 @@ feature_cols = [
    'aging_ratio_last_week', 'cleared_ratio_last_week',
    'was_in_od_last_week', 'od_weeks_last_3w', 'will_go_od_next_week'
 ]
-features_df = od_complete[feature_cols].dropna()
+features_df = od_complete[feature_cols]
 
 # 1. Set Features and Target
 feature_cols = [
