@@ -159,26 +159,25 @@ import matplotlib.pyplot as plt
 
 # --- Assuming your cleaned data is already in `od_complete` ---
 
-import pandas as pd
+iimport pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 
-# --- Assuming your full OD data is already cleaned and loaded into od_complete ---
+# --- Assuming your cleaned full od_complete DataFrame is ready ---
 
-# Step 1: Pick Week 2 clean dealers (OD = 0)
+# Step 1: Pick dealers who had OD=0 in Week 2
 week2_df = od_complete[od_complete['week_num'] == 2]
 clean_dealers_list = week2_df[week2_df['net_over_due'] == 0]['dealer_code'].unique()
 
-# Step 2: Filter entire dataset to only these dealers
+# Step 2: Filter entire data to these dealers
 od_complete_clean = od_complete[od_complete['dealer_code'].isin(clean_dealers_list)]
 
-# Step 3: Summarize dealer behavior for Week 8 to Week 2
-od_past_weeks = od_complete_clean[(od_complete_clean['week_num'] >= 2) & (od_complete_clean['week_num'] <= 8)]
+# Step 3: Summarize past behavior (Week 8 to Week 2)
+past_weeks_df = od_complete_clean[(od_complete_clean['week_num'] >= 2) & (od_complete_clean['week_num'] <= 8)]
 
-dealer_summary = od_past_weeks.groupby('dealer_code').agg({
+dealer_summary_past = past_weeks_df.groupby('dealer_code').agg({
     'net_over_due': ['mean', 'max', 'min', 'std'],
     'od_flag': 'sum',
     'aging_ratio_last_week': 'mean',
@@ -188,46 +187,46 @@ dealer_summary = od_past_weeks.groupby('dealer_code').agg({
     'was_in_od_last_week': 'max'
 })
 
-# Step 4: Flatten multi-index columns
-dealer_summary.columns = ['_'.join(col).strip() for col in dealer_summary.columns.values]
-dealer_summary = dealer_summary.reset_index()
+# Flatten multi-index
+dealer_summary_past.columns = ['_'.join(col).strip() for col in dealer_summary_past.columns.values]
+dealer_summary_past = dealer_summary_past.reset_index()
 
-# Step 5: Target Variable - Did they enter OD in Week 1?
+# Step 4: Get Target from Week 1
 week1_df = od_complete[od_complete['week_num'] == 1][['dealer_code', 'net_over_due']]
 week1_df['will_go_od_next_week'] = (week1_df['net_over_due'] > 0).astype(int)
 
-# Merge Week 1 info
-dealer_summary = dealer_summary.merge(week1_df[['dealer_code', 'will_go_od_next_week']], on='dealer_code', how='left')
+# Step 5: Merge past summary with week 1 targets
+dealer_final = dealer_summary_past.merge(week1_df[['dealer_code', 'will_go_od_next_week']], on='dealer_code', how='inner')
 
-# Step 6: Prepare X and y
-feature_cols = [col for col in dealer_summary.columns if col not in ['dealer_code', 'will_go_od_next_week']]
+# Step 6: Define X and y
+X = dealer_final.drop(columns=['dealer_code', 'will_go_od_next_week'])
+y = dealer_final['will_go_od_next_week']
 
-X = dealer_summary[feature_cols]
-y = dealer_summary['will_go_od_next_week']
-
-# Step 7: Train-Test Split (80-20 split)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Step 8: Random Forest Training
+# Step 7: Train Random Forest
 rf_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-rf_model.fit(X_train, y_train)
+rf_model.fit(X, y)
 
-# Step 9: Evaluate on test data
-y_rf_pred = rf_model.predict(X_test)
+# Step 8: Predict on same data (backtest)
+y_pred = rf_model.predict(X)
 
-print("📊 Random Forest Report (Backtesting on Week 1 OD):\n", classification_report(y_test, y_rf_pred))
-print("🧩 Confusion Matrix:\n", confusion_matrix(y_test, y_rf_pred))
+# Step 9: Evaluate
+print("📊 Random Forest Report (Backtest on Week 1):\n", classification_report(y, y_pred))
+print("🧩 Confusion Matrix:\n", confusion_matrix(y, y_pred))
 
-# Step 10: Predict full risk (if needed)
-dealer_summary['od_risk_probability'] = rf_model.predict_proba(X)[:,1]
+# Step 10: Predict Probabilities
+dealer_final['od_risk_probability'] = rf_model.predict_proba(X)[:,1]
 
-# Optional: View high-risk dealers
-high_risk_dealers = dealer_summary[dealer_summary['od_risk_probability'] > 0.6]
+# Step 11: Generate Notifications
+high_risk_dealers = dealer_final[dealer_final['od_risk_probability'] > 0.6]
 
 high_risk_dealers['notification'] = high_risk_dealers.apply(
-    lambda x: f"⚠️ Dealer {x['dealer_code']} has a {x['od_risk_probability']*100:.1f}% predicted risk of entering OD next week based on past 7 weeks behavior.",
+    lambda x: f"⚠️ Dealer {x['dealer_code']} has a {x['od_risk_probability']*100:.1f}% predicted risk of entering OD next week based on their past 7 weeks behavior.",
     axis=1
 )
 
+# Step 12: View/Export
 final_notifications = high_risk_dealers[['dealer_code', 'od_risk_probability', 'notification']]
 display(final_notifications)
+
+# (Optional) Save
+# final_notifications.to_csv("Predicted_OD_Risk_Dealers.csv", index=False)
