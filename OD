@@ -123,6 +123,7 @@ od_complete['was_in_od_last_week'] = (
 od_complete = od_complete.sort_values(['dealer_code', 'week_num'], ascending=[True, False])
 od_complete['od_days_last3w'] = 0
 
+od_complete['od_flag'] = (od_complete['net_over_due'] > 0).astype(int)
 for dealer, group in od_complete.groupby('dealer_code'):
     group = group.sort_values('week_num', ascending=True)
 
