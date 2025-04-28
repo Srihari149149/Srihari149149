@@ -119,7 +119,12 @@ od_complete['was_in_od_last_week'] = (
    od_complete.groupby('dealer_code')['net_over_due'].shift(-1) > 0
 ).astype(int)
 # 2.7 OD Days in last 3 weeks (no of weeks OD > 0)
-od_complete['od_flag'] = (od_complete['net_over_due'] > 0).astype(int)
+od_complete['od_days_last3w'] = (
+    od_complete
+    .groupby('dealer_code')['od_flag']
+    .transform(lambda x: x[::-1].rolling(window=3, min_periods=1).sum()[::-1])
+)
+
 # STEP 3: Group and calculate OD days over last 3 weeks (relative to most recent week first)
 features_df['od_days_last3w'] = (
    features_df
