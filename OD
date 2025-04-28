@@ -161,6 +161,7 @@ import matplotlib.pyplot as plt
 
 # Step 1: Summarize dealer-level features (past 8 weeks)
 
+# 1. Summarize dealer behavior over last 8 weeks
 dealer_summary = od_complete.groupby('dealer_code').agg({
     'net_over_due': ['mean', 'max', 'min', 'std'],
     'od_flag': 'sum',
@@ -168,71 +169,66 @@ dealer_summary = od_complete.groupby('dealer_code').agg({
     'cleared_ratio_last_week': 'mean',
     'delta_od_last2': ['mean', 'sum'],
     'spike_flag_last2': 'sum',
-    'was_in_od_last_week': 'max'  # 1 if OD in latest week
+    'was_in_od_last_week': 'max'  # if OD in week 1
 })
 
-# Flatten multi-index columns
+# 2. Flatten multi-index columns
 dealer_summary.columns = ['_'.join(col).strip() for col in dealer_summary.columns.values]
 dealer_summary = dealer_summary.reset_index()
 
-# Step 2: Create Target Variable
-
-# Target: Will the dealer go into OD next week?
-# Logic: If dealer had OD in Week 1 (latest week), assume next week also risky
-latest_week = 1  # Week 1 is latest
+# 3. Bring in Week 1 OD information
+latest_week = 1  # Week 1 = latest
 latest_week_df = od_complete[od_complete['week_num'] == latest_week][['dealer_code', 'net_over_due']]
 
+# 4. Merge Week 1 OD info
 dealer_summary = dealer_summary.merge(latest_week_df, on='dealer_code', how='left')
 
-# --- Step: Filter only dealers NOT already in OD in latest week ---
-
+# 5. Create 'currently_in_od' and Target 'will_go_od_next_week'
 dealer_summary['currently_in_od'] = (dealer_summary['net_over_due'] > 0).astype(int)
+dealer_summary['will_go_od_next_week'] = (dealer_summary['net_over_due'] > 0).astype(int)
 
-# Filter dealers NOT currently in OD
+# 6. Filter only dealers NOT currently in OD
 dealer_summary_filtered = dealer_summary[dealer_summary['currently_in_od'] == 0]
 
-# Drop unnecessary columns
+# 7. Drop unnecessary columns
 dealer_summary_filtered = dealer_summary_filtered.drop(columns=['currently_in_od', 'net_over_due'])
 
+# 8. Prepare X and y
+feature_cols = [col for col in dealer_summary_filtered.columns if col not in ['dealer_code', 'will_go_od_next_week']]
 
-# Drop extra net_over_due
-dealer_summary = dealer_summary.drop(columns=['net_over_due'])
+X = dealer_summary_filtered[feature_cols]
+y = dealer_summary_filtered['will_go_od_next_week']
 
-# Step 3: Prepare X and y
-feature_cols = [col for col in dealer_summary.columns if col not in ['dealer_code', 'will_go_od_next_week']]
+# 9. Train-Test Split
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-X = dealer_summary[feature_cols]
-y = dealer_summary['will_go_od_next_week']
-
-# Step 4: Train/Test Split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# Step 5: Train Random Forest
+# 10. Random Forest Training
+from sklearn.ensemble import RandomForestClassifier
 rf_model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
 rf_model.fit(X_train, y_train)
 
-# Step 6: Evaluate Model
+# 11. Evaluate Model
+from sklearn.metrics import classification_report, confusion_matrix
 y_rf_pred = rf_model.predict(X_test)
 
 print("📊 Random Forest Report:\n", classification_report(y_test, y_rf_pred))
 print("🧩 Random Forest Confusion Matrix:\n", confusion_matrix(y_test, y_rf_pred))
 
-# Step 7: Predict Risk for Full Dealer List
-dealer_summary['od_risk_probability'] = rf_model.predict_proba(X)[:,1]
+# 12. Predict OD risk on full dealer list
+dealer_summary_filtered['od_risk_probability'] = rf_model.predict_proba(X)[:,1]
 
-# Step 8: Generate Notification Only for High Risk Dealers (optional threshold 60%)
-high_risk_dealers = dealer_summary[dealer_summary['od_risk_probability'] > 0.6]
+# 13. Generate Notifications for High Risk Dealers (>60%)
+high_risk_dealers = dealer_summary_filtered[dealer_summary_filtered['od_risk_probability'] > 0.6]
 
 high_risk_dealers['notification'] = high_risk_dealers.apply(
-    lambda x: f"⚠️ Dealer {x['dealer_code']} has a {x['od_risk_probability']*100:.1f}% risk of entering OD next week. Please intervene immediately.",
+    lambda x: f"⚠️ Dealer {x['dealer_code']} has a {x['od_risk_probability']*100:.1f}% risk of entering OD next week. Immediate action recommended.",
     axis=1
 )
 
-# Step 9: View/Export
+# 14. View Final Notifications
 final_notifications = high_risk_dealers[['dealer_code', 'od_risk_probability', 'notification']]
 display(final_notifications)
 
-# (Optional) Export to CSV
+# (Optional) Save to CSV
 # final_notifications.to_csv("Final_OD_Risk_Predictions.csv", index=False)
