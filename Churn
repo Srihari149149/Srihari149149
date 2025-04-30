@@ -1,0 +1,37 @@
+import pandas as pd
+
+# Step 1: Read the two files
+cols = ['Competitor_r_Name', 'Dealer_r_Account_Code__c', 'Dealer_r_Name', 'Value__c']
+value_audit_file1 = r'C:\Users\P00993489\Downloads\Value_Audit.csv'
+value_audit_file2 = r'C:\Users\P00993489\Downloads\Value_Audit_2.csv'
+
+value_audit_df1 = pd.read_csv(value_audit_file1, usecols=cols, encoding='latin1')
+value_audit_df2 = pd.read_csv(value_audit_file2, usecols=cols, encoding='latin1')
+
+# Step 2: Add year columns manually
+value_audit_df1['year'] = 2023  # replace with actual year of file1
+value_audit_df2['year'] = 2024  # replace with actual year of file2
+
+# Step 3: Clean dealer code (keep last 6 digits only)
+value_audit_df1['dealer_code'] = value_audit_df1['Dealer_r_Account_Code__c'].astype(str).str[-6:]
+value_audit_df2['dealer_code'] = value_audit_df2['Dealer_r_Account_Code__c'].astype(str).str[-6:]
+
+# Step 4: Concatenate the two years of data
+value_audit_combined = pd.concat([value_audit_df1, value_audit_df2], ignore_index=True)
+
+# Step 5: Group by dealer and year to get total value per year
+dealer_yoy = (
+    value_audit_combined
+    .groupby(['dealer_code', 'year'])['Value__c']
+    .sum()
+    .unstack()
+    .reset_index()
+)
+
+# Step 6: Add column to show competitor growth
+dealer_yoy['competitor_growth'] = (
+    (dealer_yoy[2024] - dealer_yoy[2023]) / dealer_yoy[2023]
+).round(2)
+
+# Display the output
+display(dealer_yoy)
