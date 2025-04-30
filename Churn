@@ -1,37 +1,31 @@
 import pandas as pd
 
-# Step 1: Read the two files
-cols = ['Competitor_r_Name', 'Dealer_r_Account_Code__c', 'Dealer_r_Name', 'Value__c']
-value_audit_file1 = r'C:\Users\P00993489\Downloads\Value_Audit.csv'
-value_audit_file2 = r'C:\Users\P00993489\Downloads\Value_Audit_2.csv'
+# Read both value audit files
+cols = ['Competitor_r_Name', 'Dealer_r_Account_Code__c', 'Value__c']
 
-value_audit_df1 = pd.read_csv(value_audit_file1, usecols=cols, encoding='latin1')
-value_audit_df2 = pd.read_csv(value_audit_file2, usecols=cols, encoding='latin1')
+value_audit_2024 = pd.read_csv("path_to_value_audit_2024.csv", usecols=cols)
+value_audit_2023 = pd.read_csv("path_to_value_audit_2023.csv", usecols=cols)
 
-# Step 2: Add year columns manually
-value_audit_df1['year'] = 2023  # replace with actual year of file1
-value_audit_df2['year'] = 2024  # replace with actual year of file2
+# Step 1: Filter out 'APL' competitors
+value_audit_2024 = value_audit_2024[value_audit_2024['Competitor_r_Name'] != 'APL']
+value_audit_2023 = value_audit_2023[value_audit_2023['Competitor_r_Name'] != 'APL']
 
-# Step 3: Clean dealer code (keep last 6 digits only)
-value_audit_df1['dealer_code'] = value_audit_df1['Dealer_r_Account_Code__c'].astype(str).str[-6:]
-value_audit_df2['dealer_code'] = value_audit_df2['Dealer_r_Account_Code__c'].astype(str).str[-6:]
+# Step 2: Keep only last 6 digits of dealer codes
+value_audit_2024['dealer_code'] = value_audit_2024['Dealer_r_Account_Code__c'].astype(str).str[-6:]
+value_audit_2023['dealer_code'] = value_audit_2023['Dealer_r_Account_Code__c'].astype(str).str[-6:]
 
-# Step 4: Concatenate the two years of data
-value_audit_combined = pd.concat([value_audit_df1, value_audit_df2], ignore_index=True)
+# Step 3: Group and sum total competitor value per dealer
+agg_2024 = value_audit_2024.groupby('dealer_code')['Value__c'].sum().reset_index().rename(columns={'Value__c': 'comp_value_2024'})
+agg_2023 = value_audit_2023.groupby('dealer_code')['Value__c'].sum().reset_index().rename(columns={'Value__c': 'comp_value_2023'})
 
-# Step 5: Group by dealer and year to get total value per year
-dealer_yoy = (
-    value_audit_combined
-    .groupby(['dealer_code', 'year'])['Value__c']
-    .sum()
-    .unstack()
-    .reset_index()
-)
+# Step 4: Merge both year datasets
+dealer_yoy = pd.merge(agg_2024, agg_2023, on='dealer_code', how='left')
 
-# Step 6: Add column to show competitor growth
-dealer_yoy['competitor_growth'] = (
-    (dealer_yoy[2024] - dealer_yoy[2023]) / dealer_yoy[2023]
-).round(2)
+# Step 5: Drop rows where 2023 value is missing (no meaningful growth to compare)
+dealer_yoy = dealer_yoy.dropna(subset=['comp_value_2023'])
 
-# Display the output
-display(dealer_yoy)
+# Step 6: Compute YoY growth %
+dealer_yoy['comp_yoy_growth'] = ((dealer_yoy['comp_value_2024'] - dealer_yoy['comp_value_2023']) / dealer_yoy['comp_value_2023']) * 100
+
+# View sample output
+display(dealer_yoy.head())
