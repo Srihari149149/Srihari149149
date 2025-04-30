@@ -29,3 +29,80 @@ dealer_yoy['comp_yoy_growth'] = ((dealer_yoy['comp_value_2024'] - dealer_yoy['co
 
 # View sample output
 display(dealer_yoy.head())
+
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+# --------------------
+# Step 1: Load your monthly AP sales data
+# Columns: dealer_code, month (datetime), sales_value
+# --------------------
+
+# Example: replace this with your actual DataFrame
+# sales_data = pd.read_csv("path_to_sales_data.csv", parse_dates=['month'])
+
+# Sort and prepare
+sales_data = sales_data.sort_values(['dealer_code', 'month'])
+sales_data['month_ordinal'] = sales_data['month'].map(lambda x: x.toordinal())
+
+# --------------------
+# Step 2: Compute slope of AP sales value over the last 3 months for each dealer
+# --------------------
+
+def compute_slope(group):
+    if len(group) < 2:
+        return np.nan
+    X = group['month_ordinal'].values.reshape(-1, 1)
+    y = group['sales_value'].values
+    model = LinearRegression()
+    model.fit(X, y)
+    return model.coef_[0]  # slope
+
+sales_trend = (
+    sales_data.groupby('dealer_code')
+    .apply(compute_slope)
+    .reset_index(name='sales_slope')
+)
+
+# --------------------
+# Step 3: Load your competitor growth data (already created earlier)
+# Columns: dealer_code, comp_value_2023, comp_value_2024, comp_yoy_growth
+# --------------------
+
+# Example: dealer_yoy = pd.read_csv("dealer_yoy_output.csv")
+# (Make sure the column is named: 'competitor_growth' for % growth)
+
+# Rename if needed
+# dealer_yoy.rename(columns={'comp_yoy_growth': 'competitor_growth'}, inplace=True)
+
+# --------------------
+# Step 4: Merge the two datasets on dealer_code
+# --------------------
+
+churn_df = pd.merge(sales_trend, dealer_yoy[['dealer_code', 'competitor_growth']], on='dealer_code', how='inner')
+
+# --------------------
+# Step 5: Flag churn risk where competitor_growth > 10% and AP sales are falling
+# --------------------
+
+churn_df['churn_risk'] = ((churn_df['competitor_growth'] > 0.10) & (churn_df['sales_slope'] < 0)).astype(int)
+
+# --------------------
+# Step 6: Generate notification text
+# --------------------
+
+churn_df['notification'] = churn_df.apply(
+    lambda x: f"⚠️ Dealer {x['dealer_code']} is showing rising competitor sales and declining AP sales — risk of churn." 
+    if x['churn_risk'] == 1 else "", axis=1
+)
+
+# --------------------
+# Step 7: View / Save Results
+# --------------------
+
+display(churn_df[['dealer_code', 'competitor_growth', 'sales_slope', 'churn_risk', 'notification']])
+
+# Optional: Export
+# churn_df.to_csv("churn_prediction_output.csv", index=False)
+
