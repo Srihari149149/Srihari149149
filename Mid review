@@ -1,0 +1,64 @@
+Here you go — a fully formatted, **ready-to-paste PowerPoint slide** for your **Churn Risk Insight**, matching the OD slide style:
+
+---
+
+### 🎯 Slide Title:  
+**Use Case: Predicting Dealer Churn Risk Using Retail Audit + Sales Decline**
+
+---
+
+### 🔍 Business Problem:
+- Managers often miss early signals of **dealers slowly shifting to competitors**.  
+- Current KPIs don’t flag risk until sales drop significantly.  
+- Needed a predictive way to detect churn *before* it becomes visible in revenue.
+
+---
+
+### 🧠 Solution:
+- Combined **Retail Audit data (YoY competitor growth)** with **3-month AP sales trends**.
+- If competitor sales are rising while AP sales are declining, the dealer is flagged.
+- Churn flag allows **targeted intervention before sales drop sharply**.
+
+---
+
+### ⚙️ Techniques Used:
+- Merged 2 years of **Retail Audit data**
+- Calculated **YoY growth** in competitor value per dealer
+- Calculated **3-month slope** of AP sales using regression
+- Flagged churn risk where:
+  - `competitor_growth > 0`
+  - `sales_slope < 0`
+
+---
+
+### 💡 Model Logic:
+> **Churn Risk = 1**, if  
+> 📈 Competitor sales are increasing (YoY)  
+> 📉 AP sales trend is negative (past 3 months)
+
+---
+
+### 🧾 Example Case:
+> **Dealer Code:** 401238  
+> **Competitor Growth:** +25% (YoY)  
+> **AP Sales Trend (Slope):** -0.4  
+> 🔔 **Model Output:** Churn Risk = 1  
+> ✅ ASM can intervene with offers or focused visits
+
+---
+
+### 📈 Business Value:
+- Prevents churn by catching early warning signs  
+- Helps ASMs prioritize at-risk dealers across territories  
+- Adds predictive capability missing from standard dashboards
+
+---
+
+### 🖼 Screenshot Suggestions:
+1. Table showing **competitor_growth**, **sales_slope**, **churn_risk**
+2. One flagged dealer row as example (like 401238)
+3. Optional: Sales trend graph over 3 months (if visual is needed)
+
+---
+
+Let me know when you’re ready for the **Engagement Drop** slide — we can keep the same high-impact format.
