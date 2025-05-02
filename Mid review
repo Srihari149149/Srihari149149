@@ -59,6 +59,87 @@ Here you go — a fully formatted, **ready-to-paste PowerPoint slide** for your 
 2. One flagged dealer row as example (like 401238)
 3. Optional: Sales trend graph over 3 months (if visual is needed)
 
+
+Great! Let’s combine both insights — **Advanced Ratio Push Potential** and **Advanced Ratio Drop Despite Sales Stability** — into a single, cohesive slide. I’ll also include the value addition over what TSEs already see (just the KPI).
+
+---
+
+### 🎯 **Slide Title:**  
+**Advanced Ratio Intelligence: Who to Push, Who’s Dropping**
+
+---
+
+### 🔍 **Business Problem**
+- TSEs currently see **advanced ratio KPIs** per dealer — but it’s static and lacks **interpretation or prediction**.
+- No mechanism to:
+  1. Identify **dealers ready to push advanced paints**, or  
+  2. Detect **dealers dropping advanced products despite strong sales**.
+
+---
+
+### 🧠 **Solution**
+Built **two AI-powered insights** from product ratio trends and sales behavior:
+
+---
+
+#### 🔷 **1. Push Potential Insight**
+> Identifies dealers where:
+> - ✅ Advanced ratio is steadily rising (≥ +5% slope)
+> - ✅ Sales value or volume is also increasing
+> - ✅ Growth is due to advanced product pickup, not base product drop
+
+**📌 Example:**  
+Dealer **228614**  
+📈 Advanced Ratio Trend: +6.2%  
+📦 Sales Volume: Stable  
+🔔 Recommendation: *"Push more advanced products to this dealer"*
+
+---
+
+#### 🔻 **2. Advanced Ratio Drop Insight**
+> Flags dealers who:
+> - Had a **flat or rising ratio** earlier (months 6–3)
+> - But show a **decline in advanced ratio in recent 3 months**
+> - ⚠️ Sales volume remains stable → not a demand issue
+
+**📌 Example:**  
+Dealer **301278**  
+📉 Advanced Ratio Drop: -4.8%  
+📦 Sales Volume: Increasing  
+🔔 Insight: *"Dealer reducing advanced product mix despite stable sales — consider re-engagement"*
+
+---
+
+### 📈 **Techniques Used**
+- Mapped products using code prefixes (Advanced vs Base)
+- Filtered for “AT” product mix only
+- Calculated:
+  - Advanced ratio = A / (A + B)
+  - Rolling 6-month linear regression slope for ratio, value, volume
+- Split ratio trend into:
+  - Early phase (6–3 months)
+  - Recent phase (last 3 months)
+
+---
+
+### 💡 **Why This Adds Value**
+| TSE Currently Sees... | This Insight Adds... |
+|------------------------|-----------------------|
+| Only raw advanced ratio (%) | 📈 Trend over time |
+| No direction on action | 🎯 Push or pull-back recommendations |
+| No future-oriented prediction | 🔮 Dealer-level nudges based on behavior patterns |
+
+---
+
+### 📸 **Suggested Screenshots:**
+- Table with:
+  - `dealer_code`, `adv_ratio_slope`, `value_slope`, `push_potential`, `drop_flag`
+- Notifications generated
+- Optional: Trend chart for a dealer showing 6-month trajectory
+
+---
+
+Let me know if you'd like a **Mermaid flowchart** to show how both these insights are generated in your notebook — or we can move to the final one: **Engagement Drop**.
 ---
 
 Let me know when you’re ready for the **Engagement Drop** slide — we can keep the same high-impact format.
