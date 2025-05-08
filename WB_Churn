@@ -188,49 +188,22 @@ cat_sales_yoy = cat_sales_yoy.replace([np.inf, -np.inf], np.nan).dropna(subset=[
 
 print("Sales trends calculated.")
 
-print("Calculating division-level growth metrics...")
+print("Calculating global 3-month growth trend (entire division)...")
 
-# ✅ Step 1: Get most recent 3 months
+# ✅ Step 1: Get last 3 months
 recent_months = sorted(sales_df['month'].unique())[-3:]
 sales_3m = sales_df[sales_df['month'].isin(recent_months)]
 
-# ✅ Step 2: Prepare division-level monthly sales totals
-def get_division_growth(df):
-    monthly_data = []
+# ✅ Step 2: Aggregate total value by month
+monthly_sales = sales_3m.groupby('month')['value'].sum().reset_index()
+monthly_sales['month_index'] = range(len(monthly_sales))
 
-    for i, month in enumerate(recent_months):
-        month_data = df[df['month'] == month].groupby('division')['value'].sum().reset_index()
-        month_data['month_index'] = i
-        monthly_data.append(month_data)
+# ✅ Step 3: Apply linear regression to get overall trend
+X = monthly_sales['month_index'].values.reshape(-1, 1)
+y = monthly_sales['value'].values
+model = LinearRegression()
+model.fit(X, y)
+global_growth_slope = model.coef_[0]
 
-    division_monthly = pd.concat(monthly_data)
-
-    # ✅ Step 3: Apply linear regression slope per division
-    division_growth = {}
-    for div in division_monthly['division'].unique():
-        div_data = division_monthly[division_monthly['division'] == div]
-        if len(div_data) >= 2:
-            X = div_data['month_index'].values.reshape(-1, 1)
-            y = div_data['value'].values
-            model = LinearRegression()
-            model.fit(X, y)
-            division_growth[div] = model.coef_[0]
-
-    return pd.DataFrame(list(division_growth.items()), columns=['division', 'division_growth'])
-
-# ✅ Step 4: Compute growth
-division_growth_df = get_division_growth(sales_df)
-
-# ✅ Step 5: Map each dealer to its division
-dealer_division_map = sales_df[['dealer_code', 'division']].drop_duplicates()
-
-# ✅ Step 6: Merge into dealer- and category-level feature data
-region_3m_current = pd.merge(region_3m_current, dealer_division_map, on='dealer_code', how='left')
-region_3m_current = pd.merge(region_3m_current, division_growth_df, on='division', how='left')
-
-cat_region_3m = pd.merge(cat_region_3m, dealer_division_map, on='dealer_code', how='left')
-cat_region_3m = pd.merge(cat_region_3m, division_growth_df, on='division', how='left')
-
-print("Division-based growth metrics calculated.")
-
+print(f"Overall 3-month growth slope: {global_growth_slope:.2f}")
 
