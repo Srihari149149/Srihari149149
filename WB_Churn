@@ -288,12 +288,22 @@ def scale_regional_growth(dealer_val, global_val):
     elif global_val > 0 and dealer_val > global_val: return 0.1
     else: return 0.5
 
-def scale_od_risk(amount, slope, persistence):
-    if pd.isna(amount) or pd.isna(slope) or pd.isna(persistence): return 0.5
-    amount_risk = min(1, amount / 10000) * 0.4
-    slope_risk = (0.5 + min(0.5, slope / 1000)) * 0.3 if slope > 0 else 0.3
-    persistence_risk = persistence * 0.3
-    return amount_risk + slope_risk + persistence_risk
+# Scale first (allow some NaNs)
+dealer_features['retail_audit_risk'] = dealer_features['comp_yoy_growth'].apply(scale_comp_growth)
+dealer_features['sales_yoy_risk'] = dealer_features['sales_yoy_growth'].apply(scale_sales_yoy)
+dealer_features['sales_trend_risk'] = dealer_features['sales_slope'].apply(scale_sales_slope)
+dealer_features['regional_risk'] = dealer_features.apply(
+    lambda x: scale_regional_growth(x['sales_slope'], x['global_growth_slope']), axis=1)
+dealer_features['od_risk'] = dealer_features.apply(
+    lambda x: scale_od_risk(x['avg_od_amount'], x['od_slope'], x['od_persistence_ratio']), axis=1)
+
+# Filter: skip dealers with 0 for key sales-related risks
+filtered_dealer_features = dealer_features[
+    (dealer_features['sales_yoy_risk'] != 0) &
+    (dealer_features['sales_trend_risk'] != 0) &
+    (dealer_features['regional_risk'] != 0)
+].copy()
+
 
 # -------------------------------
 # Apply Scaling
@@ -309,13 +319,15 @@ dealer_features['regional_risk'] = dealer_features.apply(
 # -------------------------------
 # Final Risk Score and Flag
 # -------------------------------
+# Compute weighted churn score with OD risk optional
 dealer_features['churn_risk_score'] = (
     dealer_features['retail_audit_risk'] * 0.20 +
     dealer_features['sales_yoy_risk'] * 0.10 +
     dealer_features['sales_trend_risk'] * 0.25 +
     dealer_features['regional_risk'] * 0.25 +
-    dealer_features['od_risk'] * 0.20
+    dealer_features['od_risk'].fillna(0) * 0.20  # if OD is NaN, it contributes 0 risk
 )
+
 
 # Flag churn risk if score >= threshold
 risk_threshold = 0.65
