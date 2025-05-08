@@ -207,6 +207,44 @@ global_growth_slope = model.coef_[0]
 
 print(f"Overall 3-month growth slope: {global_growth_slope:.2f}")
 
+# -------------------------------
+# Feature 4: OD Data Analysis
+# -------------------------------
+print("Analyzing overdue payment patterns...")
+
+if not od_monthly_df.empty:
+    # ✅ Step 1: Get 6 most recent months
+    recent_od_months = sorted(od_monthly_df['month'].unique())[-6:]
+    recent_od_data = od_monthly_df[od_monthly_df['month'].isin(recent_od_months)]
+
+    # ✅ Step 2: Average OD per dealer
+    od_avg = recent_od_data.groupby('dealer_code')['overdue_amount'].mean().reset_index(name='avg_od_amount')
+
+    # ✅ Step 3: OD slope using linear regression
+    def compute_od_slope(group):
+        if len(group) < 2:
+            return np.nan
+        X = group['month'].map(lambda x: x.toordinal()).values.reshape(-1, 1)
+        y = group['overdue_amount'].values
+        model = LinearRegression()
+        model.fit(X, y)
+        return model.coef_[0]
+
+    od_trend = recent_od_data.groupby('dealer_code').apply(compute_od_slope).reset_index(name='od_slope')
+
+    # ✅ Step 4: Persistence = how many months dealer had OD
+    od_persistence = recent_od_data.groupby('dealer_code').size().reset_index(name='od_persistence')
+    od_persistence['od_persistence_ratio'] = od_persistence['od_persistence'] / len(recent_od_months)
+
+    # ✅ Step 5: Merge all OD metrics
+    od_analysis = pd.merge(od_avg, od_trend, on='dealer_code', how='left')
+    od_analysis = pd.merge(od_analysis, od_persistence[['dealer_code', 'od_persistence_ratio']], on='dealer_code', how='left')
+
+    print("OD analysis completed.")
+
+else:
+    print("No OD data available. Creating empty DataFrame.")
+    od_analysis = pd.DataFrame(columns=['dealer_code', 'avg_od_amount', 'od_slope', 'od_persistence_ratio'])
 
 print("Calculating dealer-level churn risk scores...")
 
