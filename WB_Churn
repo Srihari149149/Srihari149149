@@ -47,3 +47,34 @@ value_audit_2024['dealer_code'] = value_audit_2024['Dealer__r.Account_Code__c'].
 value_audit_2023['dealer_code'] = value_audit_2023['Dealer__r.Account_Code__c'].astype(str).str[-6:]
 
 print("Competitor data shapes:", value_audit_2024.shape, value_audit_2023.shape)
+
+ Load OD (Overdue) data from Excel with multiple sheets
+print("Loading OD data...")
+od_monthly_df = pd.DataFrame()
+
+try:
+    # Read all sheets from the Excel file
+    excel_file = pd.ExcelFile(od_data_path)
+    sheet_names = excel_file.sheet_names
+    
+    all_sheets_data = []
+    
+    for sheet in sheet_names:
+        try:
+            # Read each sheet
+            temp_df = pd.read_excel(excel_file, sheet_name=sheet)
+            
+            # Check if required columns exist - using the specified schema
+            required_cols = ['Posting Date', 'Customer', 'Net Over Due']
+            if all(col in temp_df.columns for col in required_cols):
+                # Select and rename relevant columns
+                sheet_data = temp_df[required_cols].copy()
+                sheet_data.columns = ['posting_date', 'customer', 'overdue_amount']
+                
+                # Extract month from Posting Date
+                sheet_data['posting_date'] = pd.to_datetime(sheet_data['posting_date'])
+                sheet_data['month'] = sheet_data['posting_date'].dt.to_period('M').dt.to_timestamp()
+                
+                # Standardize dealer code (extract last 6 digits from Customer code)
+                sheet_data['dealer_code'] = sheet_data['customer'].astype(str).str.extract(r'(\d{6})
+
