@@ -1,0 +1,34 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+import os
+from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
+
+# File paths
+sales_file = r"C:\Users\P00993489\Downloads\GOmumbai.csv"
+value_audit_file1 = r"C:\Users\P00993489\Downloads\Value_Audit.csv"
+value_audit_file2 = r"C:\Users\P00993489\Downloads\Value_audit_2.csv"
+od_data_path = r"C:\Users\P00993489\Downloads\OD_Data.xlsx"  # Path to OD data Excel workbook
+
+# Define column names
+sales_cols = ['Date', 'value', 'volume', 'territory', 'dealer code', 'category']  # Added category
+audit_cols = ['Competitor__r.Name', 'Dealer__r.Account_Code__c', 'Dealer__r.Name', 'Value__c', 'Category__c']  # Added category
+
+# Load and preprocess sales data
+print("Loading sales data...")
+sales_df = pd.read_csv(sales_file, usecols=sales_cols, encoding='latin1')
+sales_df["date"] = pd.to_datetime(sales_df["Date"])
+sales_df["month"] = sales_df["date"].dt.to_period("M").dt.to_timestamp()
+sales_df["year"] = sales_df["date"].dt.year
+sales_df["month_num"] = sales_df["date"].dt.month
+sales_df['month_ordinal'] = sales_df['month'].map(lambda x: x.toordinal())
+
+# Standardize dealer codes
+sales_df['dealer_code'] = sales_df['dealer code'].astype(str).str[-6:]
+sales_df = sales_df[~sales_df['dealer_code'].str.startswith('INB', na=False)]
+
+print("Sales data shape:", sales_df.shape)
