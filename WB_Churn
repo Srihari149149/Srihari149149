@@ -49,37 +49,58 @@ value_audit_2023['dealer_code'] = value_audit_2023['Dealer__r.Account_Code__c'].
 print("Competitor data shapes:", value_audit_2024.shape, value_audit_2023.shape)
 
  Load OD (Overdue) data from Excel with multiple sheets
+# -------------------------------
+# Load OD (Overdue) data from Excel with multiple sheets
+# -------------------------------
 print("Loading OD data...")
 od_monthly_df = pd.DataFrame()
 
 try:
-    # Read all sheets from the Excel file
+    # Load the Excel file
     excel_file = pd.ExcelFile(od_data_path)
     sheet_names = excel_file.sheet_names
-    
-    all_sheets_data = []
-    
     all_sheets_data = []
 
-for sheet in sheet_names:
-    try:
-        temp_df = pd.read_excel(excel_file, sheet_name=sheet)
-        required_cols = ['Posting Date', 'Customer', 'Net Over Due']
-        
-        if all(col in temp_df.columns for col in required_cols):
-            sheet_data = temp_df[required_cols].copy()
-            sheet_data.columns = ['posting_date', 'customer', 'overdue_amount']
-            
-            sheet_data['posting_date'] = pd.to_datetime(sheet_data['posting_date'])
-            sheet_data['month'] = sheet_data['posting_date'].dt.to_period('M').dt.to_timestamp()
-            
-            # ✅ FIXED dealer_code extraction
-            sheet_data['dealer_code'] = sheet_data['customer'].astype(str).str.extract(r'(\d{6})')
-            sheet_data = sheet_data.dropna(subset=['dealer_code'])
-            sheet_data['dealer_code'] = sheet_data['dealer_code'].astype(str)
-            
-            all_sheets_data.append(sheet_data[['dealer_code', 'month', 'overdue_amount']])
-        else:
-            print(f"Sheet {sheet} missing required columns. Skipping.")
-    except Exception as e:
-        print(f"Error processing sheet {sheet}: {e}")
+    for sheet in sheet_names:
+        try:
+            # Read each sheet
+            temp_df = pd.read_excel(excel_file, sheet_name=sheet)
+
+            # Required columns
+            required_cols = ['Posting Date', 'Customer', 'Net Over Due']
+            if all(col in temp_df.columns for col in required_cols):
+                # Select and rename
+                sheet_data = temp_df[required_cols].copy()
+                sheet_data.columns = ['posting_date', 'customer', 'overdue_amount']
+
+                # Convert date and extract month
+                sheet_data['posting_date'] = pd.to_datetime(sheet_data['posting_date'], errors='coerce')
+                sheet_data = sheet_data.dropna(subset=['posting_date'])
+                sheet_data['month'] = sheet_data['posting_date'].dt.to_period('M').dt.to_timestamp()
+
+                # Extract last 6 digits of dealer code
+                sheet_data['dealer_code'] = sheet_data['customer'].astype(str).str.extract(r'(\d{6})')
+                sheet_data = sheet_data.dropna(subset=['dealer_code'])
+                sheet_data['dealer_code'] = sheet_data['dealer_code'].astype(str)
+
+                # Keep only needed columns
+                all_sheets_data.append(sheet_data[['dealer_code', 'month', 'overdue_amount']])
+            else:
+                print(f"Sheet {sheet} missing required columns. Skipping.")
+        except Exception as e:
+            print(f"Error processing sheet {sheet}: {e}")
+
+    # Combine all sheets
+    if all_sheets_data:
+        od_monthly_df = pd.concat(all_sheets_data, ignore_index=True)
+        od_monthly_df = od_monthly_df.sort_values(['dealer_code', 'month'])
+        print("OD data shape:", od_monthly_df.shape)
+    else:
+        print("No valid OD data found in any sheet.")
+        od_monthly_df = pd.DataFrame(columns=['dealer_code', 'month', 'overdue_amount'])
+
+except Exception as e:
+    print(f"Error loading OD data: {e}")
+    print("Proceeding without OD data...")
+    od_monthly_df = pd.DataFrame(columns=['dealer_code', 'month', 'overdue_amount'])
+
