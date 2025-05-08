@@ -1,18 +1,23 @@
 import pandas as pd
 
-# Read both value audit files
-cols = ['Competitor_r_Name', 'Dealer_r_Account_Code__c', 'Value__c']
-
-value_audit_2024 = pd.read_csv("path_to_value_audit_2024.csv", usecols=cols)
-value_audit_2023 = pd.read_csv("path_to_value_audit_2023.csv", usecols=cols)
+cols = ['Date','value','volume','territory','dealer code']
+cols1 = ['Competitor__r.Name','Dealer__r.Account_Code__c','Dealer__r.Name', 'Value__c']
+sales_file =r"C:\Users\P00993489\Downloads\GOmumbai.csv"
+value_audit_file1 = r"C:\Users\P00993489\Downloads\Value_Audit.csv"
+value_audit_file2 = r"C:\Users\P00993489\Downloads\Value_audit_2.csv"
+sales_df = pd.read_csv(sales_file, usecols = cols, encoding = 'latin1')
+value_audit_df1 = pd.read_csv(value_audit_file1, usecols = cols1)
+value_audit_df2 = pd.read_csv(value_audit_file2, usecols = cols1)
+sales_df["date"] = pd.to_datetime(sales_df["Date"])
+sales_df["month"] = sales_df["date"].dt.to_period("M").dt.to_timestamp()
 
 # Step 1: Filter out 'APL' competitors
-value_audit_2024 = value_audit_2024[value_audit_2024['Competitor_r_Name'] != 'APL']
-value_audit_2023 = value_audit_2023[value_audit_2023['Competitor_r_Name'] != 'APL']
+value_audit_2024 = value_audit_df1[value_audit_df1['Competitor__r.Name'] != 'APL']
+value_audit_2023 = value_audit_df2[value_audit_df2['Competitor__r.Name'] != 'APL']
 
 # Step 2: Keep only last 6 digits of dealer codes
-value_audit_2024['dealer_code'] = value_audit_2024['Dealer_r_Account_Code__c'].astype(str).str[-6:]
-value_audit_2023['dealer_code'] = value_audit_2023['Dealer_r_Account_Code__c'].astype(str).str[-6:]
+value_audit_2024['dealer_code'] = value_audit_2024['Dealer__r.Account_Code__c'].astype(str).str[-6:]
+value_audit_2023['dealer_code'] = value_audit_2023['Dealer__r.Account_Code__c'].astype(str).str[-6:]
 
 # Step 3: Group and sum total competitor value per dealer
 agg_2024 = value_audit_2024.groupby('dealer_code')['Value__c'].sum().reset_index().rename(columns={'Value__c': 'comp_value_2024'})
@@ -20,7 +25,6 @@ agg_2023 = value_audit_2023.groupby('dealer_code')['Value__c'].sum().reset_index
 
 # Step 4: Merge both year datasets
 dealer_yoy = pd.merge(agg_2024, agg_2023, on='dealer_code', how='left')
-
 # Step 5: Drop rows where 2023 value is missing (no meaningful growth to compare)
 dealer_yoy = dealer_yoy.dropna(subset=['comp_value_2023'])
 
@@ -28,23 +32,15 @@ dealer_yoy = dealer_yoy.dropna(subset=['comp_value_2023'])
 dealer_yoy['comp_yoy_growth'] = ((dealer_yoy['comp_value_2024'] - dealer_yoy['comp_value_2023']) / dealer_yoy['comp_value_2023']) * 100
 
 # View sample output
-display(dealer_yoy.head())
+display(dealer_yoy)
 
-import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-# --------------------
-# Step 1: Load your monthly AP sales data
-# Columns: dealer_code, month (datetime), sales_value
-# --------------------
 
-# Example: replace this with your actual DataFrame
-# sales_data = pd.read_csv("path_to_sales_data.csv", parse_dates=['month'])
-
-# Sort and prepare
-sales_data = sales_data.sort_values(['dealer_code', 'month'])
-sales_data['month_ordinal'] = sales_data['month'].map(lambda x: x.toordinal())
+sales_df = sales_df.sort_values(['dealer code', 'month'])
+display(sales_df)
+sales_df['month_ordinal'] = sales_df['month'].map(lambda x: x.toordinal())
 
 # --------------------
 # Step 2: Compute slope of AP sales value over the last 3 months for each dealer
@@ -54,55 +50,37 @@ def compute_slope(group):
     if len(group) < 2:
         return np.nan
     X = group['month_ordinal'].values.reshape(-1, 1)
-    y = group['sales_value'].values
+    y = group['value'].values
     model = LinearRegression()
     model.fit(X, y)
     return model.coef_[0]  # slope
 
 sales_trend = (
-    sales_data.groupby('dealer_code')
+    sales_df.groupby('dealer code')
     .apply(compute_slope)
     .reset_index(name='sales_slope')
 )
 
-# --------------------
-# Step 3: Load your competitor growth data (already created earlier)
-# Columns: dealer_code, comp_value_2023, comp_value_2024, comp_yoy_growth
-# --------------------
+# Step 1: Remove rows where dealer_code starts with 'INB'
+sales_trend = sales_trend[~sales_trend['dealer code'].str.startswith('INB', na=False)]
+# Step 2: Keep only the last 6 characters of dealer_code
+sales_trend['dealer_code'] = sales_trend['dealer code'].astype(str).str[-6:]
+display(sales_trend)
 
-# Example: dealer_yoy = pd.read_csv("dealer_yoy_output.csv")
-# (Make sure the column is named: 'competitor_growth' for % growth)
+churn_df = pd.merge(sales_trend, dealer_yoy[['dealer_code', 'comp_yoy_growth']], on='dealer_code', how='inner')
 
-# Rename if needed
-# dealer_yoy.rename(columns={'comp_yoy_growth': 'competitor_growth'}, inplace=True)
-
-# --------------------
-# Step 4: Merge the two datasets on dealer_code
-# --------------------
-
-churn_df = pd.merge(sales_trend, dealer_yoy[['dealer_code', 'competitor_growth']], on='dealer_code', how='inner')
-
-# --------------------
-# Step 5: Flag churn risk where competitor_growth > 10% and AP sales are falling
-# --------------------
-
-churn_df['churn_risk'] = ((churn_df['competitor_growth'] > 0.10) & (churn_df['sales_slope'] < 0)).astype(int)
-
-# --------------------
-# Step 6: Generate notification text
-# --------------------
-
-churn_df['notification'] = churn_df.apply(
-    lambda x: f"⚠️ Dealer {x['dealer_code']} is showing rising competitor sales and declining AP sales — risk of churn." 
-    if x['churn_risk'] == 1 else "", axis=1
+# Step 4: Flag churn risk
+churn_df['churn_risk'] = ((churn_df['comp_yoy_growth'] > 0.10) & (churn_df['sales_slope'] < 0)).astype(int)
+# Step 1: Filter out dealers with infinite YoY growth (caused by division by zero)
+churn_df = churn_df.replace([np.inf, -np.inf], np.nan)  # Replace inf with NaN
+churn_df = churn_df.dropna(subset=['comp_yoy_growth'])  # Drop rows with NaN in growth
+# Step 2: Filter only churn risk = 1
+churn_output = churn_df[churn_df['churn_risk'] == 1]
+churn_output['notification'] = churn_output.apply(
+   lambda x: f" Dealer {x['dealer_code']} is showing rising competitor sales (+{x['comp_yoy_growth']*100:.1f}%) and declining AP sales — risk of churn."
+   if x['churn_risk'] == 1 else "", axis=1
 )
-
-# --------------------
-# Step 7: View / Save Results
-# --------------------
-
-display(churn_df[['dealer_code', 'competitor_growth', 'sales_slope', 'churn_risk', 'notification']])
-
-# Optional: Export
-# churn_df.to_csv("churn_prediction_output.csv", index=False)
-
+# Step 3: Display only relevant columns
+churn_output = churn_output[['dealer_code', 'comp_yoy_growth', 'sales_slope', 'notification']]
+# Final display
+display(churn_output)
