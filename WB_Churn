@@ -104,3 +104,34 @@ except Exception as e:
     print("Proceeding without OD data...")
     od_monthly_df = pd.DataFrame(columns=['dealer_code', 'month', 'overdue_amount'])
 
+
+print("Calculating competitor YoY growth...")
+
+# Group and sum total competitor value per dealer and category
+agg_2024 = value_audit_2024.groupby(['dealer_code', 'Category__c'])['Value__c'].sum().reset_index().rename(
+    columns={'Value__c': 'comp_value_2024', 'Category__c': 'category'})
+agg_2023 = value_audit_2023.groupby(['dealer_code', 'Category__c'])['Value__c'].sum().reset_index().rename(
+    columns={'Value__c': 'comp_value_2023', 'Category__c': 'category'})
+
+# Overall dealer totals
+dealer_total_2024 = value_audit_2024.groupby('dealer_code')['Value__c'].sum().reset_index().rename(
+    columns={'Value__c': 'comp_value_2024'})
+dealer_total_2023 = value_audit_2023.groupby('dealer_code')['Value__c'].sum().reset_index().rename(
+    columns={'Value__c': 'comp_value_2023'})
+
+# Merge and calculate YoY
+category_yoy = pd.merge(agg_2024, agg_2023, on=['dealer_code', 'category'], how='left')
+category_yoy = category_yoy.dropna(subset=['comp_value_2023'])
+category_yoy['comp_yoy_growth'] = ((category_yoy['comp_value_2024'] - category_yoy['comp_value_2023']) / category_yoy['comp_value_2023'])
+
+dealer_yoy = pd.merge(dealer_total_2024, dealer_total_2023, on='dealer_code', how='left')
+dealer_yoy = dealer_yoy.dropna(subset=['comp_value_2023'])
+dealer_yoy['comp_yoy_growth'] = ((dealer_yoy['comp_value_2024'] - dealer_yoy['comp_value_2023']) / dealer_yoy['comp_value_2023'])
+
+# Clean up
+category_yoy = category_yoy.replace([np.inf, -np.inf], np.nan).dropna(subset=['comp_yoy_growth'])
+dealer_yoy = dealer_yoy.replace([np.inf, -np.inf], np.nan).dropna(subset=['comp_yoy_growth'])
+
+print("Competitor YoY growth calculated.")
+
+
