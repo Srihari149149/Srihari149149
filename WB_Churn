@@ -32,3 +32,18 @@ sales_df['dealer_code'] = sales_df['dealer code'].astype(str).str[-6:]
 sales_df = sales_df[~sales_df['dealer_code'].str.startswith('INB', na=False)]
 
 print("Sales data shape:", sales_df.shape)
+
+
+ Load and preprocess competitor data (Value Audit)
+print("Loading competitor data...")
+value_audit_df1 = pd.read_csv(value_audit_file1, usecols=audit_cols)
+value_audit_df2 = pd.read_csv(value_audit_file2, usecols=audit_cols)
+
+# Filter out 'APL' competitors and standardize dealer codes
+value_audit_2024 = value_audit_df1[value_audit_df1['Competitor__r.Name'] != 'APL']
+value_audit_2023 = value_audit_df2[value_audit_df2['Competitor__r.Name'] != 'APL']
+
+value_audit_2024['dealer_code'] = value_audit_2024['Dealer__r.Account_Code__c'].astype(str).str[-6:]
+value_audit_2023['dealer_code'] = value_audit_2023['Dealer__r.Account_Code__c'].astype(str).str[-6:]
+
+print("Competitor data shapes:", value_audit_2024.shape, value_audit_2023.shape)
