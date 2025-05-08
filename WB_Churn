@@ -207,3 +207,104 @@ global_growth_slope = model.coef_[0]
 
 print(f"Overall 3-month growth slope: {global_growth_slope:.2f}")
 
+
+print("Calculating dealer-level churn risk scores...")
+
+# ✅ Merge all dealer-level features
+dealer_features = dealer_trends.copy()
+
+dealer_features = pd.merge(dealer_features, dealer_yoy[['dealer_code', 'comp_yoy_growth']], on='dealer_code', how='left')
+dealer_features = pd.merge(dealer_features, dealer_sales_yoy[['dealer_code', 'sales_yoy_growth']], on='dealer_code', how='left')
+
+# Add global slope as column (so we can use same function)
+dealer_features['global_growth_slope'] = global_growth_slope
+
+# Add OD data
+if not od_analysis.empty:
+    dealer_features = pd.merge(dealer_features, od_analysis, on='dealer_code', how='left')
+else:
+    dealer_features['avg_od_amount'] = 0
+    dealer_features['od_slope'] = 0
+    dealer_features['od_persistence_ratio'] = 0
+
+# -------------------------------
+# Risk Scaling Functions
+# -------------------------------
+def scale_sales_slope(val):
+    if pd.isna(val): return 0.5
+    return 0.5 + min(0.5, abs(val) / 100) if val < 0 else 0.5 - min(0.5, val / 100)
+
+def scale_comp_growth(val):
+    if pd.isna(val): return 0.5
+    return 0.5 + min(0.5, val / 2) if val > 0 else 0.5 - min(0.5, abs(val) / 2)
+
+def scale_sales_yoy(val):
+    if pd.isna(val): return 0.5
+    return 0.5 + min(0.5, abs(val)) if val < 0 else 0.5 - min(0.5, val)
+
+def scale_regional_growth(dealer_val, global_val):
+    if pd.isna(dealer_val) or pd.isna(global_val): return 0.5
+    if global_val > 0 and dealer_val < 0: return 0.75
+    elif global_val < 0 and dealer_val < global_val: return 0.9
+    elif global_val < 0 and dealer_val > global_val: return 0.3
+    elif global_val > 0 and dealer_val > global_val: return 0.1
+    else: return 0.5
+
+def scale_od_risk(amount, slope, persistence):
+    if pd.isna(amount) or pd.isna(slope) or pd.isna(persistence): return 0.5
+    amount_risk = min(1, amount / 10000) * 0.4
+    slope_risk = (0.5 + min(0.5, slope / 1000)) * 0.3 if slope > 0 else 0.3
+    persistence_risk = persistence * 0.3
+    return amount_risk + slope_risk + persistence_risk
+
+# -------------------------------
+# Apply Scaling
+# -------------------------------
+dealer_features['retail_audit_risk'] = dealer_features['comp_yoy_growth'].apply(scale_comp_growth)
+dealer_features['sales_yoy_risk'] = dealer_features['sales_yoy_growth'].apply(scale_sales_yoy)
+dealer_features['sales_trend_risk'] = dealer_features['sales_slope'].apply(scale_sales_slope)
+dealer_features['od_risk'] = dealer_features.apply(
+    lambda x: scale_od_risk(x['avg_od_amount'], x['od_slope'], x['od_persistence_ratio']), axis=1)
+dealer_features['regional_risk'] = dealer_features.apply(
+    lambda x: scale_regional_growth(x['sales_slope'], x['global_growth_slope']), axis=1)
+
+# -------------------------------
+# Final Risk Score and Flag
+# -------------------------------
+dealer_features['churn_risk_score'] = (
+    dealer_features['retail_audit_risk'] * 0.20 +
+    dealer_features['sales_yoy_risk'] * 0.10 +
+    dealer_features['sales_trend_risk'] * 0.25 +
+    dealer_features['regional_risk'] * 0.25 +
+    dealer_features['od_risk'] * 0.20
+)
+
+# Flag churn risk if score >= threshold
+risk_threshold = 0.65
+dealer_features['churn_risk_flag'] = (dealer_features['churn_risk_score'] >= risk_threshold).astype(int)
+
+# -------------------------------
+# Notifications
+# -------------------------------
+dealer_features['notification'] = ''
+high_risk_dealers = dealer_features[dealer_features['churn_risk_flag'] == 1]
+
+for idx, row in high_risk_dealers.iterrows():
+    factors = []
+    if row['retail_audit_risk'] > 0.7:
+        factors.append(f"rising competitor sales (+{row['comp_yoy_growth']*100:.1f}%)")
+    if row['sales_yoy_risk'] > 0.7:
+        factors.append(f"declining YoY sales ({row['sales_yoy_growth']*100:.1f}%)")
+    if row['sales_trend_risk'] > 0.7:
+        factors.append("negative 3-month sales trend")
+    if row['regional_risk'] > 0.7:
+        factors.append("underperforming vs overall trend")
+    if row['od_risk'] > 0.7:
+        factors.append("persistent overdue payments")
+    
+    if factors:
+        dealer_features.at[idx, 'notification'] = (
+            f"Dealer {row['dealer_code']} shows high churn risk due to: {', '.join(factors)}."
+        )
+
+print("Dealer-level churn scoring complete.")
