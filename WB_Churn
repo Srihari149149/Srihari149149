@@ -423,3 +423,44 @@ print(f"Category-level churn analysis complete: {len(category_churn_output)} at-
 
 display(category_churn_output[['dealer_code', 'category', 'churn_risk_score']].sort_values(by='churn_risk_score', ascending=False).head(10))
 
+category_churn_summary = (
+    filtered_category_features
+    .groupby('category')['churn_risk_score']
+    .mean()
+    .reset_index()
+    .rename(columns={'churn_risk_score': 'avg_churn_risk_score'})
+    .sort_values('avg_churn_risk_score', ascending=False)
+)
+
+category_churn_output['notification'] = category_churn_output.apply(lambda row:
+    f"Dealer {row['dealer_code']} is likely to reduce purchase of '{row['category']}' due to: " +
+    ', '.join(filter(None, [
+        "rising competitor activity" if row['retail_audit_risk'] > 0.7 else '',
+        "declining YoY sales" if row['sales_yoy_risk'] > 0.7 else '',
+        "negative sales trend" if row['sales_trend_risk'] > 0.7 else '',
+        "underperformance vs region" if row['regional_risk'] > 0.7 else '',
+        "OD persistence" if row['od_risk'] > 0.7 else ''
+    ])),
+    axis=1
+)
+
+
+category_churn_counts = (
+    filtered_category_features[filtered_category_features['churn_risk_flag'] == 1]
+    .groupby('category')
+    .size()
+    .reset_index(name='num_dealers_at_risk')
+)
+
+# Merge with average scores
+category_churn_overall = pd.merge(category_churn_summary, category_churn_counts, on='category', how='left')
+category_churn_overall['num_dealers_at_risk'] = category_churn_overall['num_dealers_at_risk'].fillna(0).astype(int)
+
+display(category_churn_overall.head(10))
+
+category_churn_overall['notification'] = category_churn_overall.apply(lambda row:
+    f"'{row['category']}' is at risk of regional churn with {row['num_dealers_at_risk']} dealers showing signs of disengagement.",
+    axis=1
+)
+
+
