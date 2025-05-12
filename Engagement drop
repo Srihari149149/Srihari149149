@@ -159,6 +159,8 @@ ml_data = df.dropna(subset=[
 
 # STEP 4: Split into train (months 1-3) and predict (month 4)
 month_list = sorted(ml_data['month'].unique())
+month_list = sorted(pd.to_datetime(ml_data['month'].dropna().unique()))
+
 
 if len(month_list) >= 4:
     train_months = month_list[:3]
