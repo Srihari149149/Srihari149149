@@ -1,0 +1,34 @@
+churn_output_std = churn_output[['dealer_code', 'churn_risk_score', 'notification']].copy()
+churn_output_std['score'] = churn_output_std['churn_risk_score']
+churn_output_std['insight_type'] = 'Churn'
+churn_output_std = churn_output_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
+
+
+od_output_std = od_output[['dealer_code', 'od_risk_score', 'notification']].copy()
+od_output_std['score'] = od_output_std['od_risk_score']
+od_output_std['insight_type'] = 'OD Risk'
+od_output_std = od_output_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
+
+
+engagement_output_std = engagement_output[['dealer_code', 'product_category', 'drop_prob', 'notification']].copy()
+engagement_output_std['score'] = engagement_output_std['drop_prob']
+engagement_output_std['insight_type'] = 'Engagement Drop'
+engagement_output_std = engagement_output_std[['dealer_code', 'insight_type', 'product_category', 'score', 'notification']]
+
+
+adv_push_std = adv_push_output[['dealer_code', 'target_push_potential']].copy()
+adv_push_std['score'] = adv_push_std['target_push_potential'] * 1.0
+adv_push_std['notification'] = adv_push_std['dealer_code'].apply(
+    lambda x: f"Dealer {x} is a candidate for push based on advanced product uptake.")
+adv_push_std['insight_type'] = 'Advanced Push Potential'
+adv_push_std = adv_push_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
+
+adv_drop_std = adv_drop_output[adv_drop_output['drop_flag'] == 1].copy()
+adv_drop_std['score'] = 1.0
+adv_drop_std['notification'] = adv_drop_std['dealer_code'].apply(
+    lambda x: f"Dealer {x} shows risk of disengaging from advanced product category.")
+adv_drop_std['insight_type'] = 'Advanced Ratio Drop'
+adv_drop_std = adv_drop_std[['dealer_code', 'insight_type', 'score', 'notification']]
