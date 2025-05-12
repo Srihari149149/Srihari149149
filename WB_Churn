@@ -158,6 +158,11 @@ def compute_volume_slope(group):
 # Most recent 3 months
 recent_months = sorted(sales_df['month'].unique())[-3:]
 sales_3m = sales_df[sales_df['month'].isin(recent_months)]
+# Group by dealer and category
+cat_region_3m = sales_3m.groupby(['dealer_code', 'category'])['value'].sum().reset_index(name='3m_value')
+
+# Add placeholder for 'region_growth' using global_growth_slope (since entire dataset is one region)
+cat_region_3m['region_growth'] = global_growth_slope
 
 # Dealer-level trend
 dealer_trends = sales_3m.groupby('dealer_code').apply(compute_slope).reset_index(name='sales_slope')
