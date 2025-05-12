@@ -358,3 +358,63 @@ for idx, row in high_risk_dealers.iterrows():
         )
 
 print("Dealer-level churn scoring complete.")
+
+print("Calculating category-level churn risk scores...")
+
+# ✅ Start with trend features
+category_features = category_trends.copy()
+
+# Merge all required features
+category_features = pd.merge(category_features, category_yoy[['dealer_code', 'category', 'comp_yoy_growth']],
+                             on=['dealer_code', 'category'], how='left')
+category_features = pd.merge(category_features, cat_sales_yoy[['dealer_code', 'category', 'sales_yoy_growth']],
+                             on=['dealer_code', 'category'], how='left')
+category_features = pd.merge(category_features, cat_region_3m[['dealer_code', 'category', 'region_growth']],
+                             on=['dealer_code', 'category'], how='left')
+
+# Add global_growth_slope as baseline (entire division)
+category_features['global_growth_slope'] = global_growth_slope
+
+# Merge OD data (same across all categories for a dealer)
+if not od_analysis.empty:
+    category_features = pd.merge(category_features, od_analysis, on='dealer_code', how='left')
+else:
+    category_features['avg_od_amount'] = 0
+    category_features['od_slope'] = 0
+    category_features['od_persistence_ratio'] = 0
+
+# ✅ Apply scaling functions
+category_features['retail_audit_risk'] = category_features['comp_yoy_growth'].apply(scale_comp_growth)
+category_features['sales_yoy_risk'] = category_features['sales_yoy_growth'].apply(scale_sales_yoy)
+category_features['sales_trend_risk'] = category_features['sales_slope'].apply(scale_sales_slope)
+category_features['regional_risk'] = category_features.apply(
+    lambda x: scale_regional_growth(x['sales_slope'], x['global_growth_slope']), axis=1)
+category_features['od_risk'] = category_features.apply(
+    lambda x: scale_od_risk(x['avg_od_amount'], x['od_slope'], x['od_persistence_ratio']), axis=1)
+
+# ✅ Apply same filters as dealer churn
+filtered_category_features = category_features[
+    (category_features['sales_yoy_risk'] != 0) &
+    (category_features['sales_trend_risk'] != 0) &
+    (category_features['regional_risk'] != 0)
+].copy()
+
+# ✅ Final score (OD can be NaN)
+filtered_category_features['churn_risk_score'] = (
+    filtered_category_features['retail_audit_risk'] * 0.20 +
+    filtered_category_features['sales_yoy_risk'] * 0.10 +
+    filtered_category_features['sales_trend_risk'] * 0.25 +
+    filtered_category_features['regional_risk'] * 0.25 +
+    filtered_category_features['od_risk'].fillna(0) * 0.20
+)
+
+# ✅ Flag churn
+filtered_category_features['churn_risk_flag'] = (filtered_category_features['churn_risk_score'] >= risk_threshold).astype(int)
+
+# ✅ Output: high-risk dealer-category pairs
+category_churn_output = filtered_category_features[filtered_category_features['churn_risk_flag'] == 1].copy()
+
+print(f"Category-level churn analysis complete: {len(category_churn_output)} at-risk dealer-category pairs.")
+
+display(category_churn_output[['dealer_code', 'category', 'churn_risk_score']].sort_values(by='churn_risk_score', ascending=False).head(10))
+
