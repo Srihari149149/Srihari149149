@@ -1,24 +1,35 @@
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
 # STEP 3: Drop NA rows
 ml_data = df.dropna(subset=[
     'value_lag1', 'volume_lag1',
     'value_pct_change', 'volume_pct_change',
 ])
 
-# STEP 4: Split into train (months 1-3) and predict (month 4)
+# Ensure 'month' column is of type Period for consistency
+ml_data['month'] = pd.to_datetime(ml_data['month']).dt.to_period('M')
+
+# STEP 4: Split into train (months 1–21) and predict (month 22)
 month_list = sorted(ml_data['month'].unique())
-print(month_list)
-if len(month_list) >=22:
+print("Available months:", month_list)
+
+if len(month_list) >= 22:
     train_months = month_list[:21]
-    print(train_months)
     predict_month = month_list[21]
-    print(predict_month)
-    train_data = ml_data[ml_data['month'].isin([train_months])].copy()
-    display(train_data)
+
+    print("Train months:", train_months)
+    print("Predict month:", predict_month)
+
+    # ✅ Fixed: Remove outer list in isin()
+    train_data = ml_data[ml_data['month'].isin(train_months)].copy()
     predict_data = ml_data[ml_data['month'] == predict_month].copy()
-    # Check for multiple classes in target
+
+    display(train_data)
+
+    # Check for multiple classes
     if train_data['engagement_drop'].nunique() < 2:
-        print(" Training data only has one class. Try adjusting drop threshold or check data size.")
-        print(train_data['engagement_drop'].value_counts())
+        print("⚠️ Training data only has one class. Adjust threshold or check data size.")
         print(train_data['engagement_drop'].value_counts())
     else:
         # STEP 5: Train model
@@ -35,3 +46,8 @@ if len(month_list) >=22:
 
         model = LogisticRegression()
         model.fit(X_train_scaled, y_train)
+
+        print("✅ Model training completed.")
+
+else:
+    print("❌ Not enough months. Found only", len(month_list))
