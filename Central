@@ -32,3 +32,25 @@ adv_drop_std['notification'] = adv_drop_std['dealer_code'].apply(
     lambda x: f"Dealer {x} shows risk of disengaging from advanced product category.")
 adv_drop_std['insight_type'] = 'Advanced Ratio Drop'
 adv_drop_std = adv_drop_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
+
+def compute_drop_score(row):
+    early = row['adv_early_slope']
+    late = row['adv_late_slope']
+    volume = row['volume_slope_last3']
+
+    # Only compute if all drop conditions met
+    if early >= 0 and late < 0 and volume >= 0:
+        # Sharper drop = higher score
+        drop_magnitude = early - late  # e.g. +10 to -20 = 30
+        return min(1.0, max(0.3, drop_magnitude / 50))  # scale: 50-unit swing = full score
+    else:
+        return 0.0
+
+adv_drop_std = adv_drop_df.copy()
+adv_drop_std['score'] = adv_drop_std.apply(compute_drop_score, axis=1)
+adv_drop_std['insight_type'] = 'Advanced Ratio Drop'
+adv_drop_std['notification'] = adv_drop_std['dealer_code'].apply(
+    lambda x: f"Dealer {x} shows declining adoption of advanced products despite stable sales."
+)
+adv_drop_std = adv_drop_std[['dealer_code', 'insight_type', 'score', 'notification']]
