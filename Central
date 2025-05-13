@@ -54,3 +54,34 @@ adv_drop_std['notification'] = adv_drop_std['dealer_code'].apply(
     lambda x: f"Dealer {x} shows declining adoption of advanced products despite stable sales."
 )
 adv_drop_std = adv_drop_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
+def compute_push_score(row):
+    adv_slope = row['adv_ratio_slope']
+    value_growth = row['value_growth_pct']
+    volume_growth = row['volume_growth_pct']
+
+    # Only compute score if target_push_potential is 1
+    if row['target_push_potential'] != 1:
+        return 0.0
+
+    # Normalize slopes into 0.3–1.0
+    slope_score = min(1.0, max(0.3, adv_slope / 100))  # cap at 100
+
+    # Reward if value & volume growth > 0
+    growth_bonus = 0
+    if value_growth > 0:
+        growth_bonus += 0.1
+    if volume_growth > 0:
+        growth_bonus += 0.1
+
+    final_score = min(1.0, slope_score + growth_bonus)
+    return final_score
+
+adv_push_std = adv_push_df.copy()
+adv_push_std['score'] = adv_push_std.apply(compute_push_score, axis=1)
+adv_push_std['insight_type'] = 'Advanced Push Potential'
+adv_push_std['notification'] = adv_push_std['dealer_code'].apply(
+    lambda x: f"Dealer {x} is a candidate for push based on advanced product momentum."
+)
+adv_push_std = adv_push_std[['dealer_code', 'insight_type', 'score', 'notification']]
+
