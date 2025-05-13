@@ -85,3 +85,18 @@ adv_push_std['notification'] = adv_push_std['dealer_code'].apply(
 )
 adv_push_std = adv_push_std[['dealer_code', 'insight_type', 'score', 'notification']]
 
+territory_map = pd.read_csv("territory_mapping.csv")  # Replace with actual path
+
+dealer_insights = pd.concat([
+    churn_output_std,    # ['dealer_code', 'insight_type', 'score', 'notification']
+    od_output_std,
+    adv_push_std,
+    adv_drop_std
+], ignore_index=True)
+
+# Add territory
+dealer_insights = dealer_insights.merge(territory_map, on='dealer_code', how='left')
+
+# Confirm structure
+print(dealer_insights.columns)
+# Should have: ['dealer_code', 'insight_type', 'score', 'notification', 'territory']
