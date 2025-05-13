@@ -100,3 +100,7 @@ dealer_insights = dealer_insights.merge(territory_map, on='dealer_code', how='le
 # Confirm structure
 print(dealer_insights.columns)
 # Should have: ['dealer_code', 'insight_type', 'score', 'notification', 'territory']
+
+print(dealer_insights['insight_type'].value_counts())
+print(dealer_insights['territory'].nunique(), "territories")
+
