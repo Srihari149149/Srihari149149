@@ -149,70 +149,105 @@ business_weights = {
 avg_scores['weight'] = avg_scores['insight_type'].map(business_weights)
 avg_scores['weighted_score'] = avg_scores['score'] * avg_scores['weight']
 
-# === Step 5: Select top 2 insight types per territory ===
-avg_scores_sorted = avg_scores.sort_values(['territory', 'weighted_score'], ascending=[True, False])
-top2_insights_per_territory = avg_scores_sorted.groupby('territory').head(2).reset_index(drop=True)
-
-from collections import defaultdict
 import pandas as pd
 
-# --- Grouping notifications properly across dealers sharing the same 'issue' ---
+# === STEP 1: Merge territory into all insight DataFrames ===
+dealer_insights = pd.concat([
+    churn_output_std,
+    od_output_std,
+    adv_push_std,
+    adv_drop_std
+], ignore_index=True)
 
-grouped_notifications = []
+dealer_insights = dealer_insights.merge(territory_map, on='dealer_code', how='left')
+engagement_output_std = engagement_output_std.merge(territory_map, on='dealer_code', how='left')
+
+# === STEP 2: Calculate territory-level average scores ===
+avg_dealer_scores = dealer_insights.groupby(['territory', 'insight_type'])['score'].mean().reset_index()
+avg_engagement_scores = engagement_output_std.groupby(['territory', 'insight_type'])['score'].mean().reset_index()
+avg_scores = pd.concat([avg_dealer_scores, avg_engagement_scores], ignore_index=True)
+
+# === STEP 3: Apply business weights and calculate weighted score ===
+business_weights = {
+    'Churn': 0.35,
+    'OD Risk': 0.25,
+    'Engagement Drop': 0.20,
+    'Advanced Push Potential': 0.10,
+    'Advanced Ratio Drop': 0.10
+}
+avg_scores['weight'] = avg_scores['insight_type'].map(business_weights)
+avg_scores['weighted_score'] = avg_scores['score'] * avg_scores['weight']
+
+# === STEP 4: Pick top 2 insights per territory ===
+top2_insights_per_territory = (
+    avg_scores.sort_values(['territory', 'weighted_score'], ascending=[True, False])
+    .groupby('territory')
+    .head(2)
+    .reset_index(drop=True)
+)
+
+# === STEP 5: Generate grouped notifications as rows ===
+rows = []
 
 for territory in top2_insights_per_territory['territory'].unique():
-    grouped_notifications.append(f"=== Territory: {territory} ===\n")
-
     selected_insights = top2_insights_per_territory[
         top2_insights_per_territory['territory'] == territory
     ]['insight_type'].tolist()
 
     for insight in selected_insights:
-        grouped_notifications.append(f"\n{insight}:\n")
-
         if insight == 'Engagement Drop':
             df = engagement_output_std[engagement_output_std['territory'] == territory]
 
-            # Get top product category by average score
-            top_category = (
+            top_category_row = (
                 df.groupby('product_category')['score']
                 .mean()
-                .sort_values(ascending=False)
-                .index[0]
+                .reset_index()
+                .sort_values('score', ascending=False)
             )
 
-            top_df = df[df['product_category'] == top_category]
-            dealers = sorted(top_df['dealer_code'].astype(str).unique())
-
-            grouped_notifications.append(
-                f"• Dealers {', '.join(dealers)} likely to disengage from {top_category}"
-            )
-
+            if not top_category_row.empty:
+                top_category = top_category_row.iloc[0]['product_category']
+                dealers = sorted(
+                    df[df['product_category'] == top_category]['dealer_code'].astype(str).unique()
+                )
+                rows.append({
+                    'territory': territory,
+                    'insight_type': insight,
+                    'notification': f"Dealers {', '.join(dealers)} likely to disengage from {top_category}"
+                })
         else:
             df = dealer_insights[
                 (dealer_insights['territory'] == territory) &
                 (dealer_insights['insight_type'] == insight)
             ][['dealer_code', 'notification']].copy()
 
-            # Step 1: Extract "reason" = trailing message after colon
             df['issue'] = df['notification'].str.split("due to:").str[-1].str.strip().fillna("")
 
-            # Step 2: Group by 'issue'
-            issue_groups = df.groupby('issue')['dealer_code'].apply(lambda x: sorted(x.astype(str).unique())).reset_index()
+            grouped = df.groupby('issue')['dealer_code'].apply(
+                lambda x: sorted(x.astype(str).unique())
+            ).reset_index()
 
-            for _, row in issue_groups.iterrows():
+            for _, row in grouped.iterrows():
+                issue = row['issue']
                 dealers = row['dealer_code']
-                reason = row['issue']
 
                 if insight == 'Advanced Push Potential':
-                    grouped_notifications.append(
-                        f"• Dealers {', '.join(dealers)} are candidates for push based on advanced product momentum."
-                    )
+                    notif = f"Dealers {', '.join(dealers)} are candidates for push based on advanced product momentum."
                 else:
-                    grouped_notifications.append(
-                        f"• Dealers {', '.join(dealers)} likely to reduce purchase due to: {reason}"
-                    )
+                    notif = f"Dealers {', '.join(dealers)} likely to reduce purchase due to: {issue}"
 
-# Show final grouped output
-final_output = "\n".join(grouped_notifications)
-print(final_output)
+                rows.append({
+                    'territory': territory,
+                    'insight_type': insight,
+                    'notification': notif
+                })
+
+# === STEP 6: Create final table with top 2 grouped notifications per territory ===
+notification_df = pd.DataFrame(rows)
+notification_df['rank'] = notification_df.groupby('territory').cumcount() + 1
+final_notification_table = notification_df[notification_df['rank'] <= 2].drop(columns='rank')
+
+# === Display final structured output ===
+import ace_tools as tools
+tools.display_dataframe_to_user(name="Top 2 Grouped Notifications per Territory", dataframe=final_notification_table)
+
