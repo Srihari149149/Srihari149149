@@ -205,3 +205,37 @@ final_output = "\n".join(output_notifications)
 print(final_output)
 
 
+
+=== Territory: 00D1548001 ===
+
+
+Churn:
+
+• Dealer 100108 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
+• Dealer 100108 is likely to reduce purchase of 'Textures' due to: declining YoY sales, negative sales trend
+• Dealer 100139 is likely to reduce purchase of 'Enamels' due to: declining YoY sales, negative sales trend
+• Dealer 100139 is likely to reduce purchase of 'Tools' due to: declining YoY sales, negative sales trend
+• Dealer 100207 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
+• Dealer 104216 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
+• Dealer 104216 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
+• Dealer 261073 is likely to reduce purchase of 'Putty' due to: declining YoY sales, negative sales trend
+• Dealer 264172 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
+• Dealer 266030 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
+• Dealer 276626 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
+• Dealer 284858 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
+• Dealer 284858 is likely to reduce purchase of 'Ancillary Primers' due to: declining YoY sales, negative sales trend
+• Dealer 385190 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
+• Dealer 539641 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
+• Dealer 539641 is likely to reduce purchase of 'Wood Finishes' due to: declining YoY sales, negative sales trend
+• Dealer 539644 is likely to reduce purchase of 'Enamels' due to: declining YoY sales, negative sales trend
+• Dealer 539644 is likely to reduce purchase of 'Putty' due to: declining YoY sales, negative sales trend
+• Dealer 539644 is likely to reduce purchase of 'Textures' due to: declining YoY sales, negative sales trend
+• Dealer 583446 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
+• Dealer 583447 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
+• Dealer 583594 is likely to reduce purchase of 'Ancillary Primers' due to: declining YoY sales, negative sales trend
+• Dealer 583594 is likely to reduce purchase of 'Distemper' due to: declining YoY sales, negative sales trend
+• Dealer 586342 is likely to reduce purchase of 'SFX' due to: declining YoY sales, negative sales trend
+
+Advanced Push Potential:
+
+• Dealer 284858 is a candidate for push based on advanced product momentum.
