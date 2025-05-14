@@ -149,11 +149,11 @@ business_weights = {
 avg_scores['weight'] = avg_scores['insight_type'].map(business_weights)
 avg_scores['weighted_score'] = avg_scores['score'] * avg_scores['weight']
 
-# STEP 5: Select Top 2 Insights Per Territory
+# === Step 5: Select top 2 insight types per territory ===
 avg_scores_sorted = avg_scores.sort_values(['territory', 'weighted_score'], ascending=[True, False])
 top2_insights_per_territory = avg_scores_sorted.groupby('territory').head(2).reset_index(drop=True)
 
-# STEP 6: Generate Grouped Notifications
+# === Step 6: Generate grouped notification output ===
 final_notifications = []
 
 for territory in top2_insights_per_territory['territory'].unique():
@@ -168,8 +168,8 @@ for territory in top2_insights_per_territory['territory'].unique():
 
         if insight == 'Engagement Drop':
             df = engagement_output_std[engagement_output_std['territory'] == territory]
-
-            # Get top product category
+            
+            # Pick top product category by average score
             top_category = (
                 df.groupby('product_category')['score']
                 .mean()
@@ -177,24 +177,27 @@ for territory in top2_insights_per_territory['territory'].unique():
                 .index[0]
             )
 
-            dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
+            top_df = df[df['product_category'] == top_category]
+            dealers = sorted(top_df['dealer_code'].astype(str).unique())
+
             final_notifications.append(
-                f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
+                f"• Dealers {', '.join(dealers)} likely to disengage from {top_category}"
             )
 
         else:
             df = dealer_insights[
                 (dealer_insights['territory'] == territory) &
                 (dealer_insights['insight_type'] == insight)
-            ]
+            ][['dealer_code', 'notification']]
 
-            # Group identical messages across dealers
-            for notif, group in df.groupby('notification'):
-                dealers = sorted(group['dealer_code'].astype(str).unique())
+            # Group dealers by identical message
+            grouped = df.groupby('notification')['dealer_code'].apply(lambda x: sorted(x.astype(str).unique())).reset_index()
+
+            for _, row in grouped.iterrows():
                 final_notifications.append(
-                    f"• Dealers {', '.join(dealers)}: {notif}"
+                    f"• Dealers {', '.join(row['dealer_code'])}: {row['notification']}"
                 )
 
-# STEP 7: Display Final Notification Output
+# === Step 7: Print the final notification output ===
 output_text = "\n".join(final_notifications)
 print(output_text)
