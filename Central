@@ -169,73 +169,52 @@ top2_insights_per_territory = avg_scores_sorted.groupby('territory').head(2).res
 from IPython.display import display
 display(top2_insights_per_territory)
 
-# STEP 6: Generate Notification Output
-output_notifications = []
+# === Step: Generate Final Notification Output with Grouped Messages ===
+
+grouped_notifications = []
 
 for territory in top2_insights_per_territory['territory'].unique():
-    output_notifications.append(f"=== Territory: {territory} ===\n")
+    grouped_notifications.append(f"=== Territory: {territory} ===\n")
     
     selected_insights = top2_insights_per_territory[
         top2_insights_per_territory['territory'] == territory
     ]['insight_type'].tolist()
     
     for insight in selected_insights:
-        output_notifications.append(f"\n{insight}:\n")
-        
+        grouped_notifications.append(f"\n{insight}:\n")
+
         if insight == 'Engagement Drop':
-            msgs = engagement_output_std[
-                engagement_output_std['territory'] == territory
-            ][['dealer_code', 'product_category', 'score']]
+            # Filter for this territory
+            df = engagement_output_std[engagement_output_std['territory'] == territory]
             
-            for _, row in msgs.iterrows():
-                output_notifications.append(
-                    f"• Dealer {row['dealer_code']} likely to disengage from {row['product_category']} ({row['score']:.0%} drop risk)"
+            # Find top category based on average drop score
+            top_category_row = (
+                df.groupby('product_category')['score']
+                .mean()
+                .reset_index()
+                .sort_values('score', ascending=False)
+                .head(1)
+            )
+            
+            if not top_category_row.empty:
+                top_category = top_category_row.iloc[0]['product_category']
+                dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
+                
+                grouped_notifications.append(
+                    f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
                 )
         else:
-            msgs = dealer_insights[
+            # Group dealer-level messages
+            df = dealer_insights[
                 (dealer_insights['territory'] == territory) &
                 (dealer_insights['insight_type'] == insight)
-            ]['notification'].tolist()
-            
-            for msg in msgs:
-                output_notifications.append(f"• {msg}")
+            ]
+            for notif, group in df.groupby('notification'):
+                dealers = group['dealer_code'].unique().tolist()
+                grouped_notifications.append(
+                    f"• Dealers {', '.join(map(str, dealers))}: {notif}"
+                )
 
-# STEP 7: Show Final Output
-final_output = "\n".join(output_notifications)
-print(final_output)
-
-
-
-=== Territory: 00D1548001 ===
-
-
-Churn:
-
-• Dealer 100108 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
-• Dealer 100108 is likely to reduce purchase of 'Textures' due to: declining YoY sales, negative sales trend
-• Dealer 100139 is likely to reduce purchase of 'Enamels' due to: declining YoY sales, negative sales trend
-• Dealer 100139 is likely to reduce purchase of 'Tools' due to: declining YoY sales, negative sales trend
-• Dealer 100207 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
-• Dealer 104216 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
-• Dealer 104216 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
-• Dealer 261073 is likely to reduce purchase of 'Putty' due to: declining YoY sales, negative sales trend
-• Dealer 264172 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
-• Dealer 266030 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
-• Dealer 276626 is likely to reduce purchase of 'All Emulsions' due to: declining YoY sales, negative sales trend
-• Dealer 284858 is likely to reduce purchase of 'Adhesives' due to: declining YoY sales, negative sales trend
-• Dealer 284858 is likely to reduce purchase of 'Ancillary Primers' due to: declining YoY sales, negative sales trend
-• Dealer 385190 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
-• Dealer 539641 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
-• Dealer 539641 is likely to reduce purchase of 'Wood Finishes' due to: declining YoY sales, negative sales trend
-• Dealer 539644 is likely to reduce purchase of 'Enamels' due to: declining YoY sales, negative sales trend
-• Dealer 539644 is likely to reduce purchase of 'Putty' due to: declining YoY sales, negative sales trend
-• Dealer 539644 is likely to reduce purchase of 'Textures' due to: declining YoY sales, negative sales trend
-• Dealer 583446 is likely to reduce purchase of 'Lustre' due to: declining YoY sales, negative sales trend
-• Dealer 583447 is likely to reduce purchase of 'Wall Primers' due to: declining YoY sales, negative sales trend
-• Dealer 583594 is likely to reduce purchase of 'Ancillary Primers' due to: declining YoY sales, negative sales trend
-• Dealer 583594 is likely to reduce purchase of 'Distemper' due to: declining YoY sales, negative sales trend
-• Dealer 586342 is likely to reduce purchase of 'SFX' due to: declining YoY sales, negative sales trend
-
-Advanced Push Potential:
-
-• Dealer 284858 is a candidate for push based on advanced product momentum.
+# Print final output
+final_output_text = "\n".join(grouped_notifications)
+print(final_output_text)
