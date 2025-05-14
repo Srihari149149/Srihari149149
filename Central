@@ -153,23 +153,27 @@ avg_scores['weighted_score'] = avg_scores['score'] * avg_scores['weight']
 avg_scores_sorted = avg_scores.sort_values(['territory', 'weighted_score'], ascending=[True, False])
 top2_insights_per_territory = avg_scores_sorted.groupby('territory').head(2).reset_index(drop=True)
 
-# === Step 6: Generate grouped notification output ===
-final_notifications = []
+from collections import defaultdict
+import pandas as pd
+
+# --- Grouping notifications properly across dealers sharing the same 'issue' ---
+
+grouped_notifications = []
 
 for territory in top2_insights_per_territory['territory'].unique():
-    final_notifications.append(f"=== Territory: {territory} ===\n")
-    
+    grouped_notifications.append(f"=== Territory: {territory} ===\n")
+
     selected_insights = top2_insights_per_territory[
         top2_insights_per_territory['territory'] == territory
     ]['insight_type'].tolist()
-    
+
     for insight in selected_insights:
-        final_notifications.append(f"\n{insight}:\n")
+        grouped_notifications.append(f"\n{insight}:\n")
 
         if insight == 'Engagement Drop':
             df = engagement_output_std[engagement_output_std['territory'] == territory]
-            
-            # Pick top product category by average score
+
+            # Get top product category by average score
             top_category = (
                 df.groupby('product_category')['score']
                 .mean()
@@ -180,7 +184,7 @@ for territory in top2_insights_per_territory['territory'].unique():
             top_df = df[df['product_category'] == top_category]
             dealers = sorted(top_df['dealer_code'].astype(str).unique())
 
-            final_notifications.append(
+            grouped_notifications.append(
                 f"• Dealers {', '.join(dealers)} likely to disengage from {top_category}"
             )
 
@@ -188,16 +192,27 @@ for territory in top2_insights_per_territory['territory'].unique():
             df = dealer_insights[
                 (dealer_insights['territory'] == territory) &
                 (dealer_insights['insight_type'] == insight)
-            ][['dealer_code', 'notification']]
+            ][['dealer_code', 'notification']].copy()
 
-            # Group dealers by identical message
-            grouped = df.groupby('notification')['dealer_code'].apply(lambda x: sorted(x.astype(str).unique())).reset_index()
+            # Step 1: Extract "reason" = trailing message after colon
+            df['issue'] = df['notification'].str.split("due to:").str[-1].str.strip().fillna("")
 
-            for _, row in grouped.iterrows():
-                final_notifications.append(
-                    f"• Dealers {', '.join(row['dealer_code'])}: {row['notification']}"
-                )
+            # Step 2: Group by 'issue'
+            issue_groups = df.groupby('issue')['dealer_code'].apply(lambda x: sorted(x.astype(str).unique())).reset_index()
 
-# === Step 7: Print the final notification output ===
-output_text = "\n".join(final_notifications)
-print(output_text)
+            for _, row in issue_groups.iterrows():
+                dealers = row['dealer_code']
+                reason = row['issue']
+
+                if insight == 'Advanced Push Potential':
+                    grouped_notifications.append(
+                        f"• Dealers {', '.join(dealers)} are candidates for push based on advanced product momentum."
+                    )
+                else:
+                    grouped_notifications.append(
+                        f"• Dealers {', '.join(dealers)} likely to reduce purchase due to: {reason}"
+                    )
+
+# Show final grouped output
+final_output = "\n".join(grouped_notifications)
+print(final_output)
