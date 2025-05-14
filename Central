@@ -105,18 +105,9 @@ print(dealer_insights['insight_type'].value_counts())
 print(dealer_insights['territory'].nunique(), "territories")
 
 
-# STEP 0: Imports
 import pandas as pd
 
-# STEP 1: Combine all standardized outputs
-# Make sure these are available via %run or cells above
-# Assumed format: dealer_code, insight_type, score, notification
-# engagement_output_std has: dealer_code, product_category, insight_type, score, notification
-
-# Replace these with actual dataframes you've already created:
-# churn_output_std, od_output_std, adv_push_std, adv_drop_std, engagement_output_std, territory_map
-
-# Combine dealer-level insights
+# STEP 1: Combine Dealer-Level Insights
 dealer_insights = pd.concat([
     churn_output_std,
     od_output_std,
@@ -124,32 +115,29 @@ dealer_insights = pd.concat([
     adv_drop_std
 ], ignore_index=True)
 
-# Merge with territory mapping
 dealer_insights = dealer_insights.merge(territory_map, on='dealer_code', how='left')
 
-# STEP 2: Calculate average score per territory per insight
-avg_scores = (
+# STEP 2: Engagement Drop → Add Territory
+engagement_output_std = engagement_output_std.merge(territory_map, on='dealer_code', how='left')
+
+# STEP 3: Calculate Average Scores per Insight Type per Territory
+avg_dealer_scores = (
     dealer_insights
     .groupby(['territory', 'insight_type'])['score']
     .mean()
     .reset_index()
 )
 
-# STEP 3: Handle Engagement Drop separately
-engagement_output_std = engagement_output_std.merge(territory_map, on='dealer_code', how='left')
-
-eng_avg_score = (
+avg_engagement_score = (
     engagement_output_std
-    .groupby('territory')['score']
+    .groupby(['territory', 'insight_type'])['score']
     .mean()
     .reset_index()
-    .assign(insight_type='Engagement Drop')
 )
 
-# Add to the avg_scores
-avg_scores = pd.concat([avg_scores, eng_avg_score], ignore_index=True)
+avg_scores = pd.concat([avg_dealer_scores, avg_engagement_score], ignore_index=True)
 
-# STEP 4: Apply business-defined weights
+# STEP 4: Apply Business Weights
 business_weights = {
     'Churn': 0.35,
     'OD Risk': 0.25,
@@ -161,111 +149,52 @@ business_weights = {
 avg_scores['weight'] = avg_scores['insight_type'].map(business_weights)
 avg_scores['weighted_score'] = avg_scores['score'] * avg_scores['weight']
 
-# STEP 5: Select Top 2 Insights per Territory
+# STEP 5: Select Top 2 Insights Per Territory
 avg_scores_sorted = avg_scores.sort_values(['territory', 'weighted_score'], ascending=[True, False])
 top2_insights_per_territory = avg_scores_sorted.groupby('territory').head(2).reset_index(drop=True)
 
-# (Optional) Display this if needed
-from IPython.display import display
-display(top2_insights_per_territory)
-
-# === Step: Generate Final Notification Output with Grouped Messages ===
-
-grouped_notifications = []
+# STEP 6: Generate Grouped Notifications
+final_notifications = []
 
 for territory in top2_insights_per_territory['territory'].unique():
-    grouped_notifications.append(f"=== Territory: {territory} ===\n")
+    final_notifications.append(f"=== Territory: {territory} ===\n")
     
     selected_insights = top2_insights_per_territory[
         top2_insights_per_territory['territory'] == territory
     ]['insight_type'].tolist()
     
     for insight in selected_insights:
-        grouped_notifications.append(f"\n{insight}:\n")
+        final_notifications.append(f"\n{insight}:\n")
 
         if insight == 'Engagement Drop':
-            # Filter for this territory
             df = engagement_output_std[engagement_output_std['territory'] == territory]
-            
-            # Find top category based on average drop score
-            top_category_row = (
+
+            # Get top product category
+            top_category = (
                 df.groupby('product_category')['score']
                 .mean()
-                .reset_index()
-                .sort_values('score', ascending=False)
-                .head(1)
+                .sort_values(ascending=False)
+                .index[0]
             )
-            
-            if not top_category_row.empty:
-                top_category = top_category_row.iloc[0]['product_category']
-                dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
-                
-                grouped_notifications.append(
-                    f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
-                )
+
+            dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
+            final_notifications.append(
+                f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
+            )
+
         else:
-            # Group dealer-level messages
             df = dealer_insights[
                 (dealer_insights['territory'] == territory) &
                 (dealer_insights['insight_type'] == insight)
             ]
+
+            # Group identical messages across dealers
             for notif, group in df.groupby('notification'):
-                dealers = group['dealer_code'].unique().tolist()
-                grouped_notifications.append(
-                    f"• Dealers {', '.join(map(str, dealers))}: {notif}"
+                dealers = sorted(group['dealer_code'].astype(str).unique())
+                final_notifications.append(
+                    f"• Dealers {', '.join(dealers)}: {notif}"
                 )
 
-# Print final output
-final_output_text = "\n".join(grouped_notifications)
-print(final_output_text)
-
-# === Step: Generate Final Notification Output with Grouped Messages ===
-
-grouped_notifications = []
-
-for territory in top2_insights_per_territory['territory'].unique():
-    grouped_notifications.append(f"=== Territory: {territory} ===\n")
-    
-    selected_insights = top2_insights_per_territory[
-        top2_insights_per_territory['territory'] == territory
-    ]['insight_type'].tolist()
-    
-    for insight in selected_insights:
-        grouped_notifications.append(f"\n{insight}:\n")
-
-        if insight == 'Engagement Drop':
-            # Filter for this territory
-            df = engagement_output_std[engagement_output_std['territory'] == territory]
-            
-            # Find top category based on average drop score
-            top_category_row = (
-                df.groupby('product_category')['score']
-                .mean()
-                .reset_index()
-                .sort_values('score', ascending=False)
-                .head(1)
-            )
-            
-            if not top_category_row.empty:
-                top_category = top_category_row.iloc[0]['product_category']
-                dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
-                
-                grouped_notifications.append(
-                    f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
-                )
-        else:
-            # Group dealer-level messages
-            df = dealer_insights[
-                (dealer_insights['territory'] == territory) &
-                (dealer_insights['insight_type'] == insight)
-            ]
-            for notif, group in df.groupby('notification'):
-                dealers = group['dealer_code'].unique().tolist()
-                grouped_notifications.append(
-                    f"• Dealers {', '.join(map(str, dealers))}: {notif}"
-                )
-
-# Print final output
-final_output_text = "\n".join(grouped_notifications)
-print(final_output_text)
-
+# STEP 7: Display Final Notification Output
+output_text = "\n".join(final_notifications)
+print(output_text)
