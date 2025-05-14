@@ -218,3 +218,54 @@ for territory in top2_insights_per_territory['territory'].unique():
 # Print final output
 final_output_text = "\n".join(grouped_notifications)
 print(final_output_text)
+
+# === Step: Generate Final Notification Output with Grouped Messages ===
+
+grouped_notifications = []
+
+for territory in top2_insights_per_territory['territory'].unique():
+    grouped_notifications.append(f"=== Territory: {territory} ===\n")
+    
+    selected_insights = top2_insights_per_territory[
+        top2_insights_per_territory['territory'] == territory
+    ]['insight_type'].tolist()
+    
+    for insight in selected_insights:
+        grouped_notifications.append(f"\n{insight}:\n")
+
+        if insight == 'Engagement Drop':
+            # Filter for this territory
+            df = engagement_output_std[engagement_output_std['territory'] == territory]
+            
+            # Find top category based on average drop score
+            top_category_row = (
+                df.groupby('product_category')['score']
+                .mean()
+                .reset_index()
+                .sort_values('score', ascending=False)
+                .head(1)
+            )
+            
+            if not top_category_row.empty:
+                top_category = top_category_row.iloc[0]['product_category']
+                dealers = df[df['product_category'] == top_category]['dealer_code'].unique().tolist()
+                
+                grouped_notifications.append(
+                    f"• Dealers {', '.join(map(str, dealers))} likely to disengage from {top_category}"
+                )
+        else:
+            # Group dealer-level messages
+            df = dealer_insights[
+                (dealer_insights['territory'] == territory) &
+                (dealer_insights['insight_type'] == insight)
+            ]
+            for notif, group in df.groupby('notification'):
+                dealers = group['dealer_code'].unique().tolist()
+                grouped_notifications.append(
+                    f"• Dealers {', '.join(map(str, dealers))}: {notif}"
+                )
+
+# Print final output
+final_output_text = "\n".join(grouped_notifications)
+print(final_output_text)
+
