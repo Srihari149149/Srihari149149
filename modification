@@ -155,3 +155,18 @@ def compute_slope(group, column):
     model = LinearRegression()
     model.fit(X, y)
     return model.coef_[0]
+
+
+
+# Filter for flagged churn categories only
+churned_categories = category_features[category_features['churn_risk_flag'] == 1].copy()
+
+# Sort by dealer and churn risk score
+churned_categories = churned_categories.sort_values(['dealer_code', 'churn_risk_score'], ascending=[True, False])
+
+# Keep top 3 per dealer
+top3_category_churn = churned_categories.groupby('dealer_code').head(3).reset_index(drop=True)
+
+# Optional: Display or export
+import ace_tools as tools
+tools.display_dataframe_to_user(name="Top 3 Category Churn Per Dealer", dataframe=top3_category_churn)
