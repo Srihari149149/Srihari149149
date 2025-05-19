@@ -56,61 +56,91 @@ print("Sales trends calculated.")
 
 ------
 
-print("Analyzing product category sales trends (with 6-month slope and share filter)...")
+print("Analyzing sales data trends (6-month window)...")
 
-# Step 1: Get last 6 months of sales
-recent_6m = sorted(sales_df['month'].unique())[-6:]
-sales_6m = sales_df[sales_df['month'].isin(recent_6m)].copy()
+# Helper functions
+def compute_slope(group):
+    if len(group) < 2:
+        return np.nan
+    X = group['month_ordinal'].values.reshape(-1, 1)
+    y = group['Value'].values
+    model = LinearRegression()
+    model.fit(X, y)
+    return model.coef_[0]
 
-# Step 2: Compute month_ordinal (if not already done)
+def compute_volume_slope(group):
+    if len(group) < 2:
+        return np.nan
+    X = group['month_ordinal'].values.reshape(-1, 1)
+    y = group['Volume'].values
+    model = LinearRegression()
+    model.fit(X, y)
+    return model.coef_[0]
+
+# === STEP 1: Define recent 6-month period ===
+recent_months = sorted(sales_df['month'].unique())[-6:]
+sales_6m = sales_df[sales_df['month'].isin(recent_months)].copy()
+
+# === STEP 2: Add month ordinal for slope calculation ===
 sales_6m['month_ordinal'] = sales_6m['month'].map(lambda x: x.toordinal())
 
-# Step 3: Compute total sales per dealer over the 6 months
+# === STEP 3: Dealer-level slope (value & volume) ===
+dealer_trends = sales_6m.groupby('dealer_code').apply(compute_slope).reset_index(name='sales_slope')
+dealer_volume_trends = sales_6m.groupby('dealer_code').apply(compute_volume_slope).reset_index(name='volume_slope')
+dealer_trends = pd.merge(dealer_trends, dealer_volume_trends, on='dealer_code', how='left')
+
+# === STEP 4: Filter categories with >5% contribution per dealer ===
+# Dealer total sales
 dealer_total_6m = sales_6m.groupby('dealer_code')['Value'].sum().reset_index(name='dealer_total_6m')
 
-# Step 4: Compute total sales per dealer-category over 6 months
+# Dealer-category sales
 dealer_cat_6m = (
     sales_6m.groupby(['dealer_code', 'Product_Category'])['Value']
     .sum()
     .reset_index(name='cat_sales_6m')
 )
 
-# Step 5: Merge and compute share
+# Compute share
 dealer_cat_6m = dealer_cat_6m.merge(dealer_total_6m, on='dealer_code', how='left')
 dealer_cat_6m['cat_share'] = dealer_cat_6m['cat_sales_6m'] / dealer_cat_6m['dealer_total_6m']
 
-# Step 6: Keep only dealer-category combos with >5% share
+# Keep only those >5% share
 valid_dealer_categories = dealer_cat_6m[dealer_cat_6m['cat_share'] >= 0.05][['dealer_code', 'Product_Category']]
 
-# Step 7: Compute 6-month sales and volume slopes for these
-def compute_slope(group, column):
-    if len(group) < 2:
-        return np.nan
-    X = group['month_ordinal'].values.reshape(-1, 1)
-    y = group[column].values
-    model = LinearRegression()
-    model.fit(X, y)
-    return model.coef_[0]
-
-# Filter only valid dealer-category combinations
+# === STEP 5: Category-level slope (value & volume) for valid dealer-category combos ===
 sales_6m_valid = sales_6m.merge(valid_dealer_categories, on=['dealer_code', 'Product_Category'], how='inner')
 
-# Compute value slope
+# Value slope
 cat_value_slope = (
     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
     .apply(lambda g: compute_slope(g, 'Value'))
     .reset_index(name='sales_slope')
 )
 
-# Compute volume slope
+# Volume slope
 cat_volume_slope = (
     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
     .apply(lambda g: compute_slope(g, 'Volume'))
     .reset_index(name='volume_slope')
 )
 
-# Final category-level slope trends (to merge with churn logic)
+# Final category-level slope trends
 category_trends = pd.merge(cat_value_slope, cat_volume_slope, on=['dealer_code', 'Product_Category'])
 
-print("Filtered category-level trends (6-month, >5% share) calculated.")
+# === STEP 6: Continue with YoY logic as is ===
+current_year = sales_df['year'].max()
+prev_year = current_year - 1
 
+dealer_sales_current = sales_df[sales_df['year'] == current_year].groupby('dealer_code')['Value'].sum().reset_index(name='current_sales')
+dealer_sales_prev = sales_df[sales_df['year'] == prev_year].groupby('dealer_code')['Value'].sum().reset_index(name='prev_sales')
+dealer_sales_yoy = pd.merge(dealer_sales_current, dealer_sales_prev, on='dealer_code', how='left')
+dealer_sales_yoy['sales_yoy_growth'] = ((dealer_sales_yoy['current_sales'] - dealer_sales_yoy['prev_sales']) / dealer_sales_yoy['prev_sales'])
+dealer_sales_yoy = dealer_sales_yoy.replace([np.inf, -np.inf], np.nan).dropna(subset=['sales_yoy_growth'])
+
+cat_sales_current = sales_df[sales_df['year'] == current_year].groupby(['dealer_code', 'Product_Category'])['Value'].sum().reset_index(name='current_sales')
+cat_sales_prev = sales_df[sales_df['year'] == prev_year].groupby(['dealer_code', 'Product_Category'])['Value'].sum().reset_index(name='prev_sales')
+cat_sales_yoy = pd.merge(cat_sales_current, cat_sales_prev, on=['dealer_code', 'Product_Category'], how='left')
+cat_sales_yoy['sales_yoy_growth'] = ((cat_sales_yoy['current_sales'] - cat_sales_yoy['prev_sales']) / cat_sales_yoy['prev_sales'])
+cat_sales_yoy = cat_sales_yoy.replace([np.inf, -np.inf], np.nan).dropna(subset=['sales_yoy_growth'])
+
+print("Sales trends calculated with 6-month slope and filtered category churn.")
