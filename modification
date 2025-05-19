@@ -147,110 +147,11 @@ print("Sales trends calculated with 6-month slope and filtered category churn.")
 
 
 
----------
-TypeError                                 Traceback (most recent call last)
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\groupby.py:1824, in GroupBy.apply(self, func, include_groups, *args, **kwargs)
-   1823 try:
--> 1824     result = self._python_apply_general(f, self._selected_obj)
-   1825     if (
-   1826         not isinstance(self.obj, Series)
-   1827         and self._selection is None
-   1828         and self._selected_obj.shape != self._obj_with_exclusions.shape
-   1829     ):
-
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\groupby.py:1885, in GroupBy._python_apply_general(self, f, data, not_indexed_same, is_transform, is_agg)
-   1859 """
-   1860 Apply function f in python space
-   1861 
-   (...)   1883     data after applying f
-   1884 """
--> 1885 values, mutated = self._grouper.apply_groupwise(f, data, self.axis)
-   1886 if not_indexed_same is None:
-
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\ops.py:919, in BaseGrouper.apply_groupwise(self, f, data, axis)
-    918 group_axes = group.axes
---> 919 res = f(group)
-    920 if not mutated and not _is_indexed_like(res, group_axes, axis):
-
-Cell In[36], line 58, in <lambda>(g)
-     55 # Value slope
-     56 cat_value_slope = (
-     57     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
----> 58     .apply(lambda g: compute_slope(g, 'Value'))
-     59     .reset_index(name='sales_slope')
-     60 )
-     62 # Volume slope
-
-TypeError: compute_slope() takes 1 positional argument but 2 were given
-
-During handling of the above exception, another exception occurred:
-
-TypeError                                 Traceback (most recent call last)
-Cell In[36], line 58
-     53 sales_6m_valid = sales_6m.merge(valid_dealer_categories, on=['dealer_code', 'Product_Category'], how='inner')
-     55 # Value slope
-     56 cat_value_slope = (
-     57     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
----> 58     .apply(lambda g: compute_slope(g, 'Value'))
-     59     .reset_index(name='sales_slope')
-     60 )
-     62 # Volume slope
-     63 cat_volume_slope = (
-     64     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
-     65     .apply(lambda g: compute_slope(g, 'Volume'))
-     66     .reset_index(name='volume_slope')
-     67 )
-
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\groupby.py:1846, in GroupBy.apply(self, func, include_groups, *args, **kwargs)
-   1830             warnings.warn(
-   1831                 message=_apply_groupings_depr.format(
-   1832                     type(self).__name__, "apply"
-   (...)   1835                 stacklevel=find_stack_level(),
-   1836             )
-   1837     except TypeError:
-   1838         # gh-20949
-   1839         # try again, with .apply acting as a filtering
-   (...)   1843         # fails on *some* columns, e.g. a numeric operation
-   1844         # on a string grouper column
--> 1846         return self._python_apply_general(f, self._obj_with_exclusions)
-   1848 return result
-
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\groupby.py:1885, in GroupBy._python_apply_general(self, f, data, not_indexed_same, is_transform, is_agg)
-   1850 @final
-   1851 def _python_apply_general(
-   1852     self,
-   (...)   1857     is_agg: bool = False,
-   1858 ) -> NDFrameT:
-   1859     """
-   1860     Apply function f in python space
-   1861 
-   (...)   1883         data after applying f
-   1884     """
--> 1885     values, mutated = self._grouper.apply_groupwise(f, data, self.axis)
-   1886     if not_indexed_same is None:
-   1887         not_indexed_same = mutated
-
-File ~\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\groupby\ops.py:919, in BaseGrouper.apply_groupwise(self, f, data, axis)
-    917 # group might be modified
-    918 group_axes = group.axes
---> 919 res = f(group)
-    920 if not mutated and not _is_indexed_like(res, group_axes, axis):
-    921     mutated = True
-
-Cell In[36], line 58, in <lambda>(g)
-     53 sales_6m_valid = sales_6m.merge(valid_dealer_categories, on=['dealer_code', 'Product_Category'], how='inner')
-     55 # Value slope
-     56 cat_value_slope = (
-     57     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
----> 58     .apply(lambda g: compute_slope(g, 'Value'))
-     59     .reset_index(name='sales_slope')
-     60 )
-     62 # Volume slope
-     63 cat_volume_slope = (
-     64     sales_6m_valid.groupby(['dealer_code', 'Product_Category'])
-     65     .apply(lambda g: compute_slope(g, 'Volume'))
-     66     .reset_index(name='volume_slope')
-     67 )
-
-TypeError: compute_slope() takes 1 positional argument but 2 were given
-
+def compute_slope(group, column):
+    if len(group) < 2:
+        return np.nan
+    X = group['month_ordinal'].values.reshape(-1, 1)
+    y = group[column].values
+    model = LinearRegression()
+    model.fit(X, y)
+    return model.coef_[0]
