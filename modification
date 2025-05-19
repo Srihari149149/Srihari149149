@@ -145,3 +145,21 @@ for territory in top2_insights_per_territory['territory'].unique():
                     'insight_type': insight,
                     'notification': notif
                 })
+
+
+# Sort and get top 5 dealers by risk score
+df = df.sort_values(score_col, ascending=False)
+top_dealers = df['dealer_code'].astype(str).unique()[:5]
+
+# Build one notification only per insight type
+if insight == 'Advanced Push Potential':
+    notif = f"Dealers {', '.join(top_dealers)} are candidates for push based on advanced product momentum."
+else:
+    notif = f"Dealers {', '.join(top_dealers)} likely to reduce purchase due to churn risk."
+
+rows.append({
+    'territory': territory,
+    'insight_type': insight,
+    'notification': notif
+})
+
