@@ -74,3 +74,69 @@ final_notification_table = notification_df[notification_df['rank'] <= 2].drop(co
 # === Display final structured output ===
 #import ace_tools as tools
 #tools.display_dataframe_to_user(name="Top 2 Grouped Notifications per Territory", dataframe=final_notification_table)
+
+---------------------------------
+
+
+# === STEP 5: Generate grouped notifications as rows (LIMIT TOP 5 DEALERS per group) ===
+rows = []
+
+for territory in top2_insights_per_territory['territory'].unique():
+    selected_insights = top2_insights_per_territory[
+        top2_insights_per_territory['territory'] == territory
+    ]['insight_type'].tolist()
+
+    for insight in selected_insights:
+        if insight == 'Engagement Drop':
+            df = engagement_output[engagement_output['territory'] == territory]
+
+            top_category_row = (
+                df.groupby('product_category')['score']
+                .mean()
+                .reset_index()
+                .sort_values('score', ascending=False)
+            )
+
+            if not top_category_row.empty:
+                top_category = top_category_row.iloc[0]['product_category']
+                dealers = sorted(
+                    df[df['product_category'] == top_category]['dealer_code'].astype(str).unique()
+                )[:5]  # 🔴 LIMIT TO TOP 5
+                rows.append({
+                    'territory': territory,
+                    'insight_type': insight,
+                    'notification': f"Dealers {', '.join(dealers)} likely to disengage from {top_category}"
+                })
+        else:
+            df = dealer_insights[
+                (dealer_insights['territory'] == territory) &
+                (dealer_insights['insight_type'] == insight)
+            ][['dealer_code', 'notification', 'risk_score' if 'risk_score' in dealer_insights.columns else 'churn_risk_score']].copy()
+
+            df['issue'] = df['notification'].str.split("due to:").str[-1].str.strip().fillna("")
+
+            # Sort by score and group
+            score_col = 'risk_score' if 'risk_score' in df.columns else 'churn_risk_score'
+            df = df.sort_values([score_col], ascending=False)
+
+            grouped = (
+                df.groupby('issue')
+                .agg({'dealer_code': lambda x: sorted(x.astype(str).unique()[:5])})  # 🔴 LIMIT TO TOP 5 DEALERS
+                .reset_index()
+            )
+
+            for _, row in grouped.iterrows():
+                issue = row['issue']
+                dealers = row['dealer_code']
+
+                if insight == 'Advanced Push Potential':
+                    notif = f"Dealers {', '.join(dealers)} are candidates for push based on advanced product momentum."
+                else:
+                    notif = f"Dealers {', '.join(dealers)} likely to reduce purchase due to: {issue}"
+
+                rows.append({
+                    'territory': territory,
+                    'insight_type': insight,
+                    'notification': notif
+                })
+
